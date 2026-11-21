@@ -987,7 +987,7 @@ O QUE EU SEI DO PRODUTO: ${f.sabe || "nada além do nome; o que faltar, deixe [e
 ENTREGUE, em português do Brasil, nesta ordem:
 MAPA DA REFERÊNCIA: as partes do vídeo numeradas (gancho, problema, demonstração, prova, chamada pro carrinho), com os segundos de cada uma. Calcule pelos números de palavras: palavras ÷ 3,25 = segundos.
 POR QUE PRENDE: 1 frase sobre o gancho.
-ROTEIRO NOVO: pronto para gravar, mesmo tamanho da referência, dividido em cenas, exatamente neste formato (uma cena por parte do mapa):
+ROTEIRO NOVO: pronto para gravar, mesmo tamanho da referência, dividido em cenas. Use EXATAMENTE este formato, uma cena por parte do mapa, sem comentários entre as cenas:
 CENA 1
 FALA: o que eu falo, do jeito que eu falo
 IMAGEM: o que aparece na tela (enquadramento, produto, demonstração)
@@ -996,35 +996,44 @@ TEXTO NA TELA: só se tiver (na cena 1, a headline do gancho)
 
 REGRAS: entregue tudo agora, sem fazer perguntas antes: o que faltar fica [entre colchetes] para eu ajustar. Não copie frases da referência, só a estrutura. Nada de promessa de cura, resultado garantido, preço de antes falso ou urgência que a loja não deu. Não invente preço nem característica: o que não souber fica [entre colchetes]. Sem emoji e sem travessão.`;
   }
-  // Lê a copy do Claude e separa as cenas (FALA / IMAGEM / TEXTO NA TELA). Sem o formato, cada frase vira uma cena.
+  // Lê a copy do Claude e separa as cenas. Entende "CENA 1 / FALA: / IMAGEM:", partes "[1. GANCHO]" e títulos "1. Gancho".
   function cenasDaCopy(txt) {
-    const limpo = String(txt).replace(/\r/g, "").replace(/\*\*/g, "");
-    const ini = limpo.search(/ROTEIRO NOVO/i), fim = limpo.search(/3 GANCHOS|GANCHOS ALTERNATIVOS/i);
-    let bloco = ini >= 0 ? limpo.slice(ini).replace(/^ROTEIRO NOVO[^\n]*\n?/i, "") : limpo;
-    if (fim > ini && ini >= 0) bloco = limpo.slice(ini, fim).replace(/^ROTEIRO NOVO[^\n]*\n?/i, "");
-    const ganchos = fim >= 0 ? limpo.slice(fim).split("\n").slice(1).map((l) => l.replace(/^\s*[-\d.)•]+\s*/, "").trim()).filter((l) => l && !/^[A-ZÇÃÕÉÍ ]{6,}:?$/.test(l)).slice(0, 3) : [];
-    const partes = bloco.split(/\n\s*(?=CENA\s*\d+)/i).map((x) => x.trim()).filter(Boolean);
-    let cenas = [];
-    if (partes.some((x) => /^CENA\s*\d+/i.test(x))) {
-      cenas = partes.filter((x) => /^CENA\s*\d+/i.test(x)).map((x) => {
-        const pega = (rot) => { const m = x.match(new RegExp("^\\s*" + rot + "\\s*:\\s*([\\s\\S]*?)(?=\\n\\s*(FALA|IMAGEM|CENA|TEXTO NA TELA)\\s*:|$)", "im")); return m ? m[1].trim() : ""; };
-        return { fala: pega("FALA"), imagem: pega("IMAGEM") || pega("CENA"), texto: pega("TEXTO NA TELA").replace(/^\(?(nenhum|sem texto|-)\)?\.?$/i, "") };
-      }).filter((c) => c.fala || c.imagem);
-    } else {
-      cenas = bloco.split("\n").map((l) => l.replace(/^\s*[-•\d.)]+\s*/, "").trim()).filter((l) => l && !/^[A-ZÇÃÕÉÍ ]{6,}:?$/.test(l)).map((l) => ({ fala: l, imagem: "", texto: "" }));
-    }
-    return { cenas, ganchos };
+    const linhas = String(txt).replace(/\r/g, "").replace(/\*\*|__|^#+\s*/gm, "").split("\n").map((l) => l.trim());
+    const eRoteiro = (l) => /^ROTEIRO( NOVO)?\b/i.test(l), eGanchos = (l) => /^(\d+\s+)?GANCHOS?( ALTERNATIVOS| PARA TESTAR)?\b/i.test(l), eFim = (l) => /^(RISCOS|CUIDADOS|OBSERVA|ANTES DE GRAVAR|DICAS)/i.test(l);
+    let a = linhas.findIndex(eRoteiro); a = a < 0 ? 0 : a + 1;
+    let b = linhas.findIndex((l, k) => k >= a && (eGanchos(l) || eFim(l))); if (b < 0) b = linhas.length;
+    const corpo = linhas.slice(a, b);
+    const ganchos = []; const g = linhas.findIndex(eGanchos);
+    if (g >= 0) for (let k = g + 1; k < linhas.length && ganchos.length < 3; k++) { const l = linhas[k]; if (!l) continue; if (eFim(l)) break; ganchos.push(l.replace(/^\s*[-•\d.)]+\s*/, "")); }
+    const marcaCena = (l) => /^CENA\s*\d+\b/i.test(l), marcaParte = (l) => /^\[[^\]]{2,60}\]$/.test(l) || /^\d+\s*[.)-]\s*[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9 +/,-]{2,50}:?$/.test(l) || /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-ZÁÉÍÓÚÂÊÔÃÕÇ +/-]{3,40}:$/.test(l);
+    const meta = (l) => /\b(palavras|segundos)\b.*(\d)/i.test(l) && /(fala lida|total|preenchendo|deve fechar|contagem)/i.test(l);
+    const cenas = []; let atual = null;
+    const nova = (nome) => { atual = { parte: nome, fala: [], imagem: [], texto: [] }; cenas.push(atual); };
+    corpo.forEach((l) => {
+      if (!l || meta(l)) return;
+      if (marcaCena(l)) { nova(""); const resto = l.replace(/^CENA\s*\d+\s*[:.)-]?\s*/i, ""); if (resto) atual.parte = resto; return; }
+      if (marcaParte(l)) { nova(l.replace(/^\[|\]$/g, "").replace(/^\d+\s*[.)-]\s*/, "").replace(/:$/, "").trim()); return; }
+      if (!atual) nova("");
+      let m;
+      if ((m = l.match(/^FALA\s*:\s*(.*)$/i))) atual.fala.push(m[1]);
+      else if ((m = l.match(/^(IMAGEM|CENA|TELA|VISUAL)\s*:\s*(.*)$/i))) atual.imagem.push(m[2]);
+      else if ((m = l.match(/^TEXTO NA TELA\s*:\s*(.*)$/i))) { if (!/^\(?(nenhum|sem texto|-|n[aã]o tem)\)?\.?$/i.test(m[1].trim())) atual.texto.push(m[1]); }
+      else atual.fala.push(l);
+    });
+    const parte = (x) => x ? x.charAt(0).toUpperCase() + x.slice(1).toLowerCase() : "";
+    return { cenas: cenas.map((c) => ({ parte: parte(c.parte), fala: c.fala.join(" "), imagem: c.imagem.join(" "), texto: c.texto.join(" ") })).filter((c) => c.fala || c.imagem), ganchos };
   }
   function abrirRoteiro(txt, produto) {
     const { cenas, ganchos } = cenasDaCopy(txt);
-    const palavras = cenas.reduce((n, c) => n + (c.fala.match(/\S+/g) || []).length, 0), seg = Math.round(palavras / 3.25);
+    const palavras = cenas.reduce((n, c) => n + (c.fala.replace(/\[[^\]]*\]/g, "").match(/\S+/g) || []).length, 0), seg = Math.round(palavras / 3.25);
+    const comCena = cenas.some((c) => c.imagem), nomeProd = String(produto || "").trim().slice(0, 60);
     const antigo = $("#roteiroCenas"); if (antigo) antigo.remove();
     const m = document.createElement("div"); m.id = "roteiroCenas"; m.className = "roteiro-tela"; m.setAttribute("role", "dialog"); m.setAttribute("aria-label", "Roteiro de gravação");
     m.innerHTML = `<div class="roteiro-caixa">
-      <div class="roteiro-topo"><div><p class="rot">Roteiro de gravação</p><h2>Vídeo TikTok · ${esc(produto || "produto")}</h2><p class="sub">${cenas.length} cenas · ~${seg}s de fala (${palavras} palavras)</p></div>
+      <div class="roteiro-topo"><div><p class="rot">Roteiro de gravação</p><h2>Vídeo TikTok${nomeProd ? " · " + esc(nomeProd) : ""}</h2><p class="sub">${cenas.length} cenas · ~${seg}s de fala (${palavras} palavras)</p></div>
         <div class="controles"><button class="btn sec pequeno" type="button" data-acao="imprimir-roteiro">Imprimir</button><button class="btn pequeno" type="button" data-acao="fechar-roteiro">Fechar</button></div></div>
-      <div class="roteiro-colunas"><span>Áudio / fala</span><span>Imagem / cena</span></div>
-      ${cenas.map((c, i) => `<div class="roteiro-linha"><div class="r-fala"><p class="rot">Fala ${i + 1}</p><p>${esc(c.fala || "(sem fala)")}</p>${c.texto ? `<p class="r-texto">Texto na tela: <b>${esc(c.texto)}</b></p>` : ""}</div><div class="r-cena"><p class="rot">Cena ${i + 1}</p><p>${c.imagem ? esc(c.imagem) : "<i>sem cena descrita</i>"}</p></div></div>`).join("") || '<p class="vazio">Não achei cenas nessa copy.</p>'}
+      <div class="roteiro-colunas${comCena ? "" : " uma"}"><span>Áudio / fala</span>${comCena ? "<span>Imagem / cena</span>" : ""}</div>
+      ${cenas.map((c, i) => `<div class="roteiro-linha${comCena ? "" : " uma"}"><div class="r-fala"><p class="rot">Fala ${i + 1}${c.parte ? " · " + esc(c.parte) : ""}</p><p>${esc(c.fala || "(sem fala)").replace(/\[([^\]]*)\]/g, '<span class="r-lacuna">[$1]</span>')}</p>${c.texto ? `<p class="r-texto">Texto na tela: <b>${esc(c.texto)}</b></p>` : ""}</div>${comCena ? `<div class="r-cena"><p class="rot">Cena ${i + 1}</p><p>${c.imagem ? esc(c.imagem) : "<i>sem cena descrita</i>"}</p></div>` : ""}</div>`).join("") || '<p class="vazio">Não achei cenas nessa copy.</p>'}
       ${ganchos.length ? `<div class="roteiro-ganchos"><p class="rot">Ganchos para testar</p><ol>${ganchos.map((g) => `<li>${esc(g)}</li>`).join("")}</ol></div>` : ""}
     </div>`;
     document.body.appendChild(m); document.body.classList.add("com-roteiro");
@@ -1147,7 +1156,7 @@ REGRAS: entregue tudo agora, sem fazer perguntas antes: o que faltar fica [entre
         if (a === "ver-roteiro") {
           const txt = ($("#refCopy") && $("#refCopy").value) || r.copy || "";
           if (!txt.trim()) { toast("Ainda não tem copy. Gere ou cole a copy primeiro.", true); return; }
-          const f = S.refForm, prod = (f.modo === "meu" ? f.produto : f.modo === "outro" ? f.outro : f.mesmo) || tituloDa(r);
+          const f = S.refForm, prod = (f.modo === "meu" ? f.produto : f.modo === "outro" ? f.outro : f.mesmo) || "";
           abrirRoteiro(txt, prod); return;
         }
         if (a === "transcrever" && API.transcrever) {

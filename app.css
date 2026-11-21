@@ -377,6 +377,8 @@ ol.passos { margin: 0; padding-left: 20px; display: flex; flex-direction: column
   .roteiro-caixa { box-shadow: none; max-width: none; }
   .roteiro-topo .controles { display: none; }
 }
+.roteiro-colunas.uma, .roteiro-linha.uma { grid-template-columns: 1fr; }
+.r-lacuna { background: var(--ouro-tint); border-radius: 4px; padding: 0 3px; }
 
 /* Site do aluno: sem "Criar conta" */
 .abas-entrada, #formCriar { display: none !important; }
