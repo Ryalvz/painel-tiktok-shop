@@ -27,6 +27,8 @@ alter table public.perfis add column if not exists cor text not null default 'ca
 -- Como você quer ser chamado e os primeiros passos marcados (modo Começando)
 alter table public.perfis add column if not exists apelido text check (char_length(apelido) <= 40);
 alter table public.perfis add column if not exists passos jsonb not null default '{}'::jsonb;
+-- A sua chave da Supadata (transcrição da aba Criar). Só você lê: a trava do perfil vale para ela também.
+alter table public.perfis add column if not exists supadata_key text check (char_length(supadata_key) <= 200);
 alter table public.perfis enable row level security;
 drop policy if exists "aluno le o proprio perfil" on public.perfis;
 create policy "aluno le o proprio perfil" on public.perfis
