@@ -44,27 +44,168 @@
   }
 
   /* ---------- Aparência: estilo e cor (escolhidos em Meu perfil) ---------- */
-  const ESTILOS = { classico: ["Clássico", "Cartões e listas, direto ao ponto"], grafico: ["Gráfico", "Números grandes e gráfico de vendas"], minimal: ["Minimal", "Cantos redondos, ícones e muito respiro"] };
-  const CORES = { cafe: ["Café", "#2B241C", "#A8864A"], grafite: ["Grafite", "#141414", "#8A8A8E"], rosa: ["Rosa", "#3A1F2B", "#D46A8C"], oliva: ["Oliva", "#26301F", "#7C8B4A"], azul: ["Azul", "#14213D", "#3D6FB6"] };
+  // Aparência: 4 estilos (forma) x 8 paletas (cores) + cor principal opcional. Tudo combina com tudo.
+  const ESTILOS = {
+    light: ["Modern Light", "Claro e limpo, borda fina. A cor aparece só onde importa."],
+    dark: ["Dark Pro", "Fundo escuro, números fortes e destaque com brilho leve."],
+    glass: ["Glass / Aurora", "Fundo com luzes da paleta e cards de vidro. Leve e moderno."],
+    bold: ["Bold Modern", "Blocos de cor, títulos grandes e muito contraste."]
+  };
+  const PALETAS = {
+    cafe: ["Café", ["#2B241C", "#A8864A", "#D7C3A0", "#F6F2EB"]], oliva: ["Oliva", ["#3F4A2B", "#7C8B4A", "#B8C28A", "#F3F3EA"]],
+    grafite: ["Grafite", ["#1C1C1E", "#6E6E73", "#A1A1A6", "#EDEDEF"]], rosa: ["Rosa", ["#6E2F48", "#C45A80", "#E8A7BD", "#FBF1F4"]],
+    azul: ["Azul", ["#14213D", "#3D6FB6", "#8FB3E3", "#EEF2F8"]], lavanda: ["Lavanda", ["#3B2A5C", "#8E6CCB", "#C3B2E8", "#F4F1FA"]],
+    terracota: ["Terracota", ["#6B2E1F", "#C46A3C", "#E3B08E", "#F8F1EA"]], energia: ["Energia", ["#14452F", "#D9A514", "#8DBF6A", "#F3F5EE"]]
+  };
+  const CORES = PALETAS;
+  const ESTILO_ANTIGO = { clean: "light", editorial: "light", classico: "light", grafico: "light", minimal: "light", colorful: "bold" };
+  const LAYOUT_HOJE = { light: "classico", dark: "classico", glass: "classico", bold: "classico" };
+  const APARENCIA_PADRAO = { estilo: "light", cor: "cafe", custom: null };
+  const normEstilo = (e) => { e = ESTILO_ANTIGO[e] || e; return ESTILOS[e] ? e : APARENCIA_PADRAO.estilo; };
+  const normPaleta = (c) => (PALETAS[c] ? c : APARENCIA_PADRAO.cor);
+  const normCustom = (c) => (/^#[0-9a-f]{6}$/i.test(String(c || "")) ? String(c).toLowerCase() : null);
   function lerAparencia() { try { return JSON.parse(localStorage.getItem("painel-aparencia") || "{}") || {}; } catch (_) { return {}; } }
-  function aplicarAparencia(estilo, cor) {
-    const r = document.documentElement;
-    r.dataset.estilo = ESTILOS[estilo] ? estilo : "classico"; r.dataset.cor = CORES[cor] ? cor : "cafe";
-    try { localStorage.setItem("painel-aparencia", JSON.stringify({ estilo: r.dataset.estilo, cor: r.dataset.cor })); } catch (_) {}
+  function aplicarAparencia(estilo, cor, custom, alvo) {
+    const r = alvo || document.documentElement, c = normCustom(custom);
+    r.dataset.estilo = normEstilo(estilo); r.dataset.paleta = normPaleta(cor);
+    if (c) r.style.setProperty("--p-principal", c); else r.style.removeProperty("--p-principal");
+    if (!alvo) try { localStorage.setItem("painel-aparencia", JSON.stringify({ estilo: r.dataset.estilo, cor: r.dataset.paleta, custom: c })); } catch (_) {}
   }
-  (() => { const a = lerAparencia(); aplicarAparencia(a.estilo, a.cor); })();
+  (() => { const a = lerAparencia(); aplicarAparencia(a.estilo, a.cor, a.custom); })();
 
   /* ---------- Categorias e status ---------- */
-  const CATS = { tech: "Tech e eletrônicos", casa: "Casa e cozinha", beleza: "Beleza e cuidados", moda: "Moda e acessórios", fitness: "Fitness e saúde", infantil: "Infantil e pets", outros: "Outros" };
+  // Categorias e subcategorias (lista do curso). A categoria é a chave; a subcategoria é o nome.
+  const CATS_SUB = {
+    moda: ["Moda e acessórios", ["Roupas masculinas", "Roupas femininas", "Roupas infantis", "Roupas íntimas", "Pijamas e roupas de dormir", "Moda esportiva", "Moda praia", "Calçados masculinos", "Calçados femininos", "Bolsas", "Mochilas", "Carteiras", "Relógios", "Joias e bijuterias", "Óculos", "Acessórios de cabelo", "Acessórios de moda", "Malas e artigos de viagem"]],
+    beleza: ["Beleza e cuidados pessoais", ["Maquiagem", "Cuidados com a pele", "Cuidados faciais", "Cuidados corporais", "Cuidados com os cabelos", "Shampoos e condicionadores", "Finalizadores capilares", "Perfumes", "Fragrâncias", "Higiene pessoal", "Produtos para unhas", "Acessórios de maquiagem", "Ferramentas de beleza", "Aparelhos de beleza"]],
+    casa: ["Casa e estilo de vida", ["Decoração", "Organização doméstica", "Cozinha", "Utensílios de cozinha", "Eletrodomésticos", "Limpeza doméstica", "Lavanderia", "Iluminação", "Móveis", "Cama, mesa e banho", "Ferramentas", "Ferragens", "Jardinagem", "Produtos para atividades ao ar livre", "Artigos esportivos"]],
+    eletronicos: ["Eletrônicos e eletrodomésticos", ["Celulares", "Tablets", "Acessórios para celulares", "Acessórios para tablets", "Informática", "Acessórios de informática", "Fones de ouvido", "Caixas de som", "Equipamentos de áudio", "Cabos", "Carregadores", "Power banks", "Smartwatches", "Acessórios eletrônicos", "Câmeras e acessórios", "Iluminação para fotografia", "Pequenos eletrodomésticos", "Aparelhos de higiene pessoal"]],
+    auto: ["Automóveis e motocicletas", ["Acessórios automotivos", "Peças automotivas", "Iluminação automotiva", "Organização automotiva", "Limpeza automotiva", "Manutenção automotiva", "Acessórios para motocicletas", "Peças para motocicletas", "Capacetes e acessórios"]],
+    pets: ["Produtos para animais", ["Alimentos para cães", "Alimentos para gatos", "Petiscos", "Brinquedos para animais", "Higiene para pets", "Acessórios para pets", "Camas e transporte", "Cuidados com cães e gatos", "Produtos para pássaros", "Produtos para peixes", "Produtos para pequenos animais"]],
+    bebe: ["Bebê e maternidade", ["Roupas para bebês", "Acessórios para bebês", "Alimentação infantil", "Higiene infantil", "Cuidados com bebês", "Brinquedos infantis", "Produtos de maternidade"]],
+    saude: ["Saúde, nutrição e bem-estar", ["Vitaminas e minerais", "Suplementos alimentares", "Nutrição esportiva", "Produtos de bem-estar", "Cuidados pessoais"]],
+    alimentos: ["Alimentos e bebidas", ["Snacks e petiscos", "Doces e chocolates", "Alimentos embalados", "Ingredientes culinários", "Bebidas não alcoólicas", "Produtos para panificação"]],
+    joias: ["Joias de alto valor", ["Joias de ouro", "Joias de prata", "Pedras preciosas"]],
+    outros: ["Outros", []]
+  };
+  const CATS = Object.fromEntries(Object.entries(CATS_SUB).map(([k, [n]]) => [k, n]));
+  // Categorias da versão antiga do painel
+  const CAT_ANTIGA = { tech: "eletronicos", fitness: "saude", infantil: "bebe" };
+  // Reconhece pelo nome do produto: a primeira pista que bater vence (as mais específicas vêm antes)
+  const P = (cat, sub, re) => [cat, sub, re];
   const PISTAS = [
-    ["beleza", /perfume|col[oô]nia|s[eé]rum|skin|cabelo|barba|depila|maquiag|acne|hidratante|protetor solar|escova (secadora|alisadora)|chapinha|secador|unha|batom|c[ií]lio/i],
-    ["moda", /camiset|cropped|blus|t[eê]nis|cal[cç]a|vestid|bolsa|roupa|short|meia|jaqueta|moletom|biqu|lingerie|[oó]culos|colar|brinco|bon[eé]|sand[aá]lia|chinelo/i],
-    ["infantil", /beb[eê]|infantil|crian[cç]a|brinquedo|\bpet\b|cachorro|gato/i],
-    ["fitness", /academia|whey|creatina|halter|el[aá]stico|yoga|garrafa|squeeze|treino|massage|balan[cç]a/i],
-    ["casa", /cesto|espelho|copo|cadeira|odoriz|limpa|lavar|panela|organizador|cozinha|processador|air ?fryer|mop|aspirador|toalha|len[cç]ol|travesseiro|lumin[aá]ria|abajur|pote|tapete|cortina/i],
-    ["tech", /fone|microfone|caixa de som|bluetooth|usb|carregador|cabo|celular|iphone|capa|pel[ií]cula|ring ?light|\bled\b|trip[eé]|gimbal|smartwatch|power ?bank|projetor|teclado|mouse|c[aâ]mera|suporte|wi-?fi|smart|tablet|notebook/i]
+    P("joias", "Joias de ouro", /ouro (18k|18 ?quilates|750|maci[cç]o)|\b18k\b/i), P("joias", "Joias de prata", /prata (925|maci[cç]a|legítima)/i), P("joias", "Pedras preciosas", /diamante|esmeralda|\brubi\b|safira|pedra preciosa/i),
+    P("moda", "Mochilas", /mochila/i),
+    P("bebe", "Produtos de maternidade", /maternidade|gestante|amamenta|tirar leite|bomba de leite|p[oó]s[- ]parto/i),
+    P("bebe", "Roupas para bebês", /(body|macac[aã]o|roupa|conjunto|mij[aã]o|saida de maternidade).{0,25}beb[eê]|beb[eê].{0,15}(body|roupa|macac)/i),
+    P("pets", "Alimentos para cães", /ra[cç][aã]o.{0,25}(c[aã]o|c[aã]es|cachorro|dog)|(c[aã]es|cachorro).{0,15}ra[cç][aã]o/i),
+    P("pets", "Alimentos para gatos", /ra[cç][aã]o.{0,25}(gato|cat\b|felin)|sach[eê].{0,10}gato/i),
+    P("pets", "Petiscos", /petisco|bifinho|osso.{0,10}(c[aã]o|cachorro)|snack.{0,10}(c[aã]o|cachorro|gato|pet)/i),
+    P("pets", "Cuidados com cães e gatos", /verm[ií]fugo|antipulga|carrapat|suplemento.{0,10}pet/i),
+    P("pets", "Brinquedos para animais", /brinquedo.{0,20}(pet|c[aã]o|cachorro|gato)|arranhador|varinha.{0,10}gato|mordedor.{0,10}(pet|c[aã]o|cachorro)|bolinha.{0,10}(c[aã]o|cachorro|pet)/i),
+    P("pets", "Higiene para pets", /tapete higi[eê]nico|areia (para gato|sanit[aá]ria)|(shampoo|escova|cortador de unha|len[cç]o).{0,15}(pet|c[aã]o|cachorro|gato)|tira pelos pet/i),
+    P("pets", "Camas e transporte", /(cama|almofada|caminha).{0,10}(pet|c[aã]o|cachorro|gato)|caixa de transporte|bolsa de transporte|casinha (pet|de cachorro)/i),
+    P("pets", "Produtos para pássaros", /p[aá]ssaro|calopsita|gaiola|alpiste|periquito/i), P("pets", "Produtos para peixes", /aqu[aá]rio|peixe/i),
+    P("pets", "Produtos para pequenos animais", /hamster|coelho|porquinho[- ]da[- ][ií]ndia|roedor/i),
+    P("pets", "Acessórios para pets", /coleira|peitoral (pet|para c)|comedouro|bebedouro (pet|para)|\bpet\b|cachorro|\bgatos?\b|\bc[aã]es\b|felin/i),
+    P("auto", "Capacetes e acessórios", /capacete|viseira|intercomunicador/i),
+    P("auto", "Peças para motocicletas", /(pe[cç]a|retrovisor|manete|pneu|corrente|pastilha|escapamento).{0,20}\bmoto/i),
+    P("auto", "Acessórios para motocicletas", /\bmotos?\b|motocicleta|motoqueiro/i),
+    P("auto", "Iluminação automotiva", /farol|l[aâ]mpada.{0,15}(farol|automotiv|carro|h\d)|led automotiv|super ?led/i),
+    P("auto", "Limpeza automotiva", /(cera|shampoo|limpa|aspirador|flanela|pano|pretinho).{0,25}(carro|automotiv|ve[ií]cul|pneu)|lava[- ]?jato|polidor/i),
+    P("auto", "Organização automotiva", /organizador.{0,20}(carro|banco|porta[- ]malas)|porta[- ]malas/i),
+    P("auto", "Manutenção automotiva", /calibrador|compressor de ar|macaco hidr|scanner automotiv|\bobd\b|bateria.{0,10}carro|aditivo|[oó]leo (do )?motor/i),
+    P("auto", "Peças automotivas", /(pe[cç]a|filtro|pastilha|amortecedor|retrovisor|palheta).{0,25}(carro|automotiv)|palheta/i),
+    P("auto", "Acessórios automotivos", /\bcarros?\b|automotiv|ve[ií]cul|veicular|capa de banco|para[- ]sol/i),
+    P("saude", "Vitaminas e minerais", /(vitamina|multivitam|magn[eé]sio|zinco|[oô]mega ?3|ferro).{0,40}(c[aá]psula|comprimido|gotas|mastig[aá]vel|caps\b)|multivitam|[oô]mega ?3|magn[eé]sio quelato/i),
+    P("saude", "Nutrição esportiva", /whey|creatina|pr[eé][- ]treino|\bbcaa\b|prote[ií]na em p[oó]|hipercal[oó]rico|barra de prote[ií]na|glutamina|coqueteleira/i),
+    P("saude", "Suplementos alimentares", /suplemento|col[aá]geno|c[aá]psulas?\b|termog[eê]nico|melatonina|probi[oó]tico|ch[aá] (emagrecedor|detox)/i),
+    P("eletronicos", "Aparelhos de higiene pessoal", /escova (de dente )?el[eé]trica|barbeador|aparador de (pelos|barba)|irrigador oral|m[aá]quina de (cortar cabelo|acabamento)/i),
+    P("eletronicos", "Smartwatches", /smart ?watch|rel[oó]gio inteligente|smart ?band|mi band/i),
+    P("eletronicos", "Power banks", /power ?bank|carregador port[aá]til|bateria externa/i),
+    P("eletronicos", "Iluminação para fotografia", /ring ?light|softbox|luz de v[ií]deo|iluminador de v[ií]deo|painel de led (para )?(foto|v[ií]deo)/i),
+    P("eletronicos", "Fones de ouvido", /\bfones?\b|earbud|headset|headphone|airpods?/i),
+    P("eletronicos", "Caixas de som", /caixa de som|caixinha de som|speaker|soundbar/i),
+    P("eletronicos", "Equipamentos de áudio", /microfone|lapela|mesa de som|interface de [aá]udio/i),
+    P("eletronicos", "Acessórios para tablets", /(capa|pel[ií]cula|caneta|teclado|suporte).{0,20}(tablet|ipad)|caneta touch|apple pencil/i),
+    P("eletronicos", "Acessórios para celulares", /\bcapas?\b|capinha|pel[ií]cula|suporte (de |para )?celular|pop ?socket|anel (de|para) celular|magsafe|\bcase\b|celular.{0,20}suporte/i),
+    P("eletronicos", "Câmeras e acessórios", /c[aâ]mera|webcam|gopro|gimbal|estabilizador|trip[eé]|lente (para|de) celular|cart[aã]o de mem[oó]ria/i),
+    P("eletronicos", "Carregadores", /carregador|fonte usb|carregamento r[aá]pido/i),
+    P("eletronicos", "Cabos", /\bcabos?\b|lightning/i),
+    P("eletronicos", "Pequenos eletrodomésticos", /air ?fryer|fritadeira|liquidificador|mixer|cafeteira|processador|sanduicheira|batedeira|chaleira el[eé]trica|panela el[eé]trica|aspirador|grill|torradeira|espremedor|seladora|mopa? el[eé]tric/i),
+    P("eletronicos", "Acessórios de informática", /\bmouse\b|teclado|mouse ?pad|hub usb|suporte (de |para )?notebook|pen ?drive|\bssd\b|hd externo/i),
+    P("eletronicos", "Informática", /notebook|computador|monitor|impressora|roteador|repetidor wi/i),
+    P("eletronicos", "Tablets", /tablet|\bipad\b/i), P("eletronicos", "Celulares", /\bcelular\b|smartphone|iphone|galaxy|redmi|xiaomi|motorola/i),
+    P("beleza", "Aparelhos de beleza", /secador|chapinha|prancha (alisadora|de cabelo)|escova (secadora|alisadora|rotativa|modeladora)|babyliss|modelador de cachos|depilador|epilador|massageador facial|microcorrente|radiofrequ[eê]ncia|led facial/i),
+    P("beleza", "Acessórios de maquiagem", /pinc[eé]is|pincel|esponja (de )?maquiag|beauty ?blender|kit de pinc/i),
+    P("beleza", "Maquiagem", /maquiag|batom|corretivo|blush|r[ií]mel|m[aá]scara de c[ií]lios|sombra|delineador|p[oó] (compacto|facial|solto)|gloss|iluminador|contorno|primer|bruma fixadora|lip ?tint|base (l[ií]quida|de maquiag|matte)/i),
+    P("beleza", "Produtos para unhas", /esmalte|unhas?\b|cabine (led|uv)|top coat|alongamento/i),
+    P("beleza", "Cuidados faciais", /s[eé]rum|vitamina c|[aá]cido hialur|niacinamida|t[oô]nico facial|sabonete facial|m[aá]scara facial|creme facial|retinol|esfoliante facial|olheira|facial/i),
+    P("beleza", "Shampoos e condicionadores", /shampoo|xampu|condicionador/i),
+    P("beleza", "Finalizadores capilares", /finalizador|leave[- ]?in|creme de pentear|[oó]leo capilar|reparador de pontas|gel capilar|mousse capilar|pomada (capilar|modeladora)/i),
+    P("beleza", "Cuidados com os cabelos", /m[aá]scara capilar|cabelos?\b|capilar|minoxidil|barba/i),
+    P("beleza", "Perfumes", /perfume|eau de (parfum|toilette)|col[oô]nia/i), P("beleza", "Fragrâncias", /body splash|body mist|fragr[aâ]ncia/i),
+    P("beleza", "Cuidados corporais", /corporal|desodorante|sabonete l[ií]quido|esfoliante|autobronzeador/i),
+    P("beleza", "Cuidados com a pele", /protetor solar|hidratante|skin ?care|\bpele\b|acne|cravo/i),
+    P("beleza", "Ferramentas de beleza", /\bpin[cç]a\b|curvex|curvador de c[ií]lios|gua ?sha|rolo de jade|espelho de maquiag|alicate de cut[ií]cula/i),
+    P("beleza", "Higiene pessoal", /escova de dente|creme dental|fio dental|enxaguante|absorvente|l[aâ]mina de barbear|sabonete|cotonete|len[cç]o umedecido/i),
+    P("moda", "Roupas íntimas", /calcinha|cueca|suti[aã]|lingerie|cinta modeladora|body modelador|meia[- ]cal[cç]a/i),
+    P("moda", "Pijamas e roupas de dormir", /pijama|camisola|\brobe\b|roup[aã]o/i),
+    P("moda", "Moda praia", /biqu[ií]ni|\bmai[oô]\b|sunga|sa[ií]da de praia|\bcanga\b/i),
+    P("moda", "Moda esportiva", /legging|top fitness|conjunto fitness|short fitness|cal[cç]a fitness|roupa de academia|bermuda ciclista/i),
+    P("moda", "Roupas infantis", /(roupa|conjunto|vestido|camiseta|pijama|short|cal[cç]a).{0,25}(infantil|menin[oa]|crian[cç]a|kids)/i),
+    P("moda", "Calçados femininos", /(t[eê]nis|sand[aá]lia|sapat|chinelo|bota|mule|tamanco).{0,30}(femin|mulher)|rasteirinha|scarpin|salto alto|sapatilha/i),
+    P("moda", "Calçados masculinos", /(t[eê]nis|sand[aá]lia|sapat|chinelo|bota).{0,30}(mascul|homem)|mocassim/i),
+    P("moda", "", /t[eê]nis|sand[aá]lia|sapato|chinelo|\bbota\b|crocs|\bslide\b/i),
+    P("moda", "Roupas femininas", /vestido|\bsaia\b|cropped|\bblusa|(cal[cç]a|camis|conjunto|short|jaqueta|moletom|regata).{0,30}(femin|mulher)/i),
+    P("moda", "Roupas masculinas", /(camis|cal[cç]a|bermuda|short|jaqueta|moletom|polo|conjunto|regata).{0,30}(mascul|homem)|camisa polo/i),
+    P("moda", "", /camiset|camisa|cal[cç]a|bermuda|\bshort|jaqueta|moletom|regata|roupa|blazer|macac[aã]o/i),
+    P("moda", "Bolsas", /bolsa|necessaire|pochete|clutch/i), P("moda", "Carteiras", /carteira|porta[- ]cart/i),
+    P("moda", "Relógios", /rel[oó]gio/i), P("moda", "Joias e bijuterias", /bijuteria|\bcolar\b|brincos?\b|pulseira|\banel\b|tornozeleira|choker|piercing|banhad[oa] a ouro|folheado/i),
+    P("moda", "Óculos", /[oó]culos/i), P("moda", "Acessórios de cabelo", /presilha|piranha|tiara|scrunchie|xuxinha|el[aá]stico de cabelo|faixa de cabelo|grampo/i),
+    P("moda", "Malas e artigos de viagem", /\bmalas?\b|organizador de mala|travesseiro de pesco[cç]o/i),
+    P("moda", "Acessórios de moda", /\bcinto\b|chap[eé]u|\bbon[eé]\b|cachecol|\bluvas?\b|gravata|\blen[cç]o\b/i),
+    P("bebe", "Alimentação infantil", /mamadeira|chupeta|papinha|prato infantil|copo de transi|babador|esterilizador/i),
+    P("bebe", "Higiene infantil", /fralda|banheira.{0,10}beb|assadura|(shampoo|sabonete|len[cç]o).{0,15}(infantil|beb)/i),
+    P("bebe", "Cuidados com bebês", /bab[aá] eletr|aspirador nasal|carrinho de beb|cadeirinha|ber[cç]o|beb[eê] conforto|\bsling\b|canguru/i),
+    P("bebe", "Brinquedos infantis", /brinquedo|boneca|lego|blocos de montar|pel[uú]cia|quebra[- ]cabe[cç]a|massinha|slime|infantil|crian[cç]a/i),
+    P("bebe", "Acessórios para bebês", /beb[eê]|naninha|mordedor/i),
+    P("casa", "Lavanderia", /varal|lavanderia|tira (pelos|bolinhas)|removedor de bolinhas|ferro de passar|t[aá]bua de passar|sab[aã]o em p[oó]|amaciante|cesto de roupa/i),
+    P("casa", "Limpeza doméstica", /limpa|limpeza|\bmop\b|vassoura|\brodo\b|pano de ch[aã]o|esponja|desengordurante|odoriz|lustra|tira manchas|desinfetante|escova sanit/i),
+    P("casa", "Utensílios de cozinha", /esp[aá]tula|\bconcha\b|t[aá]bua de corte|\bfacas?\b|ralador|descascador|abridor|peneira|\bfouet\b|pegador|assadeira|\bforma (de|para)|cortador de (legume|fruta)|fatiador|pote herm[eé]tico/i),
+    P("casa", "Cozinha", /panela|frigideira|cozinha|\bcopos?\b|caneca|x[ií]cara|\bpratos?\b|talher|garrafa|marmita|lancheira|\bjarra\b|\bpotes?\b/i),
+    P("casa", "Organização doméstica", /organizador|cesto|caixa organizadora|cabide|prateleira|gaveteiro|porta[- ]trecos?|sapateira/i),
+    P("casa", "Eletrodomésticos", /ventilador|umidificador|purificador|aquecedor|micro[- ]?ondas|geladeira|frigobar|lava[- ]lou[cç]as|ar[- ]condicionado/i),
+    P("casa", "Iluminação", /lumin[aá]ria|abajur|l[aâ]mpada|fita (de )?led|refletor|arandela|pendente|luz noturna|\bspot\b/i),
+    P("casa", "Cama, mesa e banho", /len[cç]ol|toalha|travesseiro|edredom|colcha|fronha|cobertor|\bmanta\b|jogo de cama|tapete de banheiro/i),
+    P("casa", "Móveis", /cadeira|\bmesa\b|\bsof[aá]\b|\brack\b|estante|banqueta|poltrona|criado[- ]mudo|c[oô]moda|escrivaninha|\bpuff\b/i),
+    P("casa", "Ferramentas", /furadeira|parafusadeira|chave de fenda|kit de ferramentas?|alicate|martelo|\btrena\b|n[ií]vel a laser|\bserra\b|lixadeira|soprador/i),
+    P("casa", "Ferragens", /parafuso|\bbucha\b|dobradi[cç]a|fechadura|puxador|\bgancho\b|\bprego\b|cadeado/i),
+    P("casa", "Jardinagem", /jardim|jardinagem|vaso de planta|regador|mangueira|sementes?\b|\badubo\b|tesoura de poda/i),
+    P("casa", "Produtos para atividades ao ar livre", /camping|barraca|lanterna|cooler|rede de descanso|churrasqueira|caixa t[eé]rmica|pesca/i),
+    P("casa", "Artigos esportivos", /\bbola\b|raquete|bicicleta|\bbike\b|patins|skate|halter|anilha|kettlebell|el[aá]stico.{0,15}(exerc|treino|resist)|corda de pular|tapete de yoga|colchonete|faixa el[aá]stica|caneleira|academia|yoga|pilates/i),
+    P("casa", "Decoração", /decora|\bquadros?\b|\bvasos?\b|espelho|\bvelas?\b|tapete|cortina|almofada|porta[- ]retrato|planta artificial|difusor|aromatizador/i),
+    P("saude", "Produtos de bem-estar", /massage|pistola de massagem|bolsa t[eé]rmica|travesseiro ortop|corretor postural|aromaterapia|[oó]leo essencial|palmilha/i),
+    P("saude", "Cuidados pessoais", /balan[cç]a|term[oô]metro|ox[ií]metro|medidor de press[aã]o|nebulizador|joelheira|meia de compress/i),
+    P("alimentos", "Snacks e petiscos", /snack|salgadinho|amendoim|castanha|pipoca|\bchips\b|biscoito|bolacha|granola/i),
+    P("alimentos", "Doces e chocolates", /chocolate|\bdoces?\b|\bbalas?\b|bombom|brigadeiro|trufa|pa[cç]oca|geleia/i),
+    P("alimentos", "Bebidas não alcoólicas", /\bsuco\b|refrigerante|\bch[aá]\b|caf[eé] (em gr[aã]o|mo[ií]do|sol[uú]vel)|c[aá]psulas? de caf[eé]|energ[eé]tico|isot[oô]nico|[aá]gua de coco/i),
+    P("alimentos", "Produtos para panificação", /fermento|farinha|mistura para bolo|confeitaria|bico de confeitar|corante aliment/i),
+    P("alimentos", "Ingredientes culinários", /tempero|azeite|sal rosa|especiaria|a[cç][uú]car|ado[cç]ante|\bmolho\b/i),
+    P("alimentos", "Alimentos embalados", /macarr[aã]o|\barroz\b|feij[aã]o|enlatad|alimento|\bcomida\b/i),
+    P("eletronicos", "Acessórios eletrônicos", /\busb\b|bluetooth|\bled\b|controle remoto|\bsmart\b|eletr[oô]nic|adaptador|projetor|\bpilhas?\b|recarreg[aá]vel|wi-?fi/i)
   ];
-  const sugerirCat = (nome) => { const t = String(nome || ""); for (const [k, re] of PISTAS) if (re.test(t)) return k; return "outros"; };
+  const reconhecerCat = (nome) => { const t = String(nome || ""); for (const [c, s, re] of PISTAS) if (re.test(t)) return { cat: c, sub: s }; return { cat: "outros", sub: "" }; };
+  const sugerirCat = (nome) => reconhecerCat(nome).cat;
+  // Categoria do produto: a que o aluno corrigiu (convertendo nomes antigos) ou a reconhecida pelo nome
+  function catDoProduto(pr, nome) {
+    const auto = reconhecerCat(nome);
+    if (!pr || !pr.categoria) return auto;
+    const cat = CAT_ANTIGA[pr.categoria] || (CATS_SUB[pr.categoria] ? pr.categoria : "outros");
+    const subs = CATS_SUB[cat][1];
+    const sub = pr.subcategoria != null ? (subs.includes(pr.subcategoria) ? pr.subcategoria : "") : (auto.cat === cat ? auto.sub : "");
+    return { cat, sub };
+  }
   const catStatus = (s) => (s === "Liquidado" ? "liq" : s === "Pendente" ? "pen" : /ineleg/i.test(s || "") ? "ine" : s === "Aguardando pagamento" || s === "AwaitingPayment" ? "agu" : "out");
   const valido = (p) => p.cat === "liq" || p.cat === "pen";
 
@@ -260,7 +401,7 @@
     return {
       async sessao() { return B.perfil ? { id: "demo", email: B.perfil.email } : null; },
       aoMudar() {},
-      async entrar(email) { B.perfil = B.perfil || { user_id: "demo", email: email || "voce@exemplo.com", nome: "Aluno de exemplo", whatsapp: "27912345678", tiktok: "@seuuser", aceite_avisos: true, meta_videos: 15, meta_gmv: 100000, estilo: lerAparencia().estilo || "classico", cor: lerAparencia().cor || "cafe" }; return { id: "demo", email: B.perfil.email }; },
+      async entrar(email) { B.perfil = B.perfil || { user_id: "demo", email: email || "voce@exemplo.com", nome: "Aluno de exemplo", whatsapp: "27912345678", tiktok: "@seuuser", aceite_avisos: true, meta_videos: 15, meta_gmv: 100000, estilo: lerAparencia().estilo || "light", cor: lerAparencia().cor || "cafe", cor_custom: lerAparencia().custom || null }; return { id: "demo", email: B.perfil.email }; },
       async cadastrar(c) { B.perfil = { user_id: "demo", email: c.email, nome: c.nome, whatsapp: c.whatsapp, tiktok: c.tiktok, aceite_avisos: c.aceite, meta_videos: 15, meta_gmv: null, estilo: "classico", cor: "cafe" }; return { id: "demo", email: c.email }; },
       async recuperar() {}, async novaSenha() {}, async sair() { B.perfil = null; },
       async perfil() { return clone(B.perfil); },
@@ -299,7 +440,7 @@
     const nome = pr.apelido || p.produto || "Sem nome";
     return { ...p, cat, g: +p.gmv || 0, c: +p.comissao_est || 0, liq: cat === "liq" ? (+p.comissao_real || +p.comissao_est || 0) : 0,
       i: cat === "liq" || cat === "pen" ? Math.max(0, itens - rb) : itens, dia: String(p.data).slice(0, 10), mes: String(p.data).slice(0, 7),
-      chave: p.produto_id || "n:" + nome, nome, categoria: pr.categoria || sugerirCat(p.produto) };
+      chave: p.produto_id || "n:" + nome, nome, ...(() => { const c = catDoProduto(pr, p.produto); return { categoria: c.cat, subcategoria: c.sub }; })() };
   }
   function reprocessar() {
     S.pedidos = S.brutos.map(enriquecer);
@@ -314,10 +455,12 @@
       const ok = {}; ["nome", "apelido", "tiktok", "meta_gmv", "meta_videos", "estilo", "cor"].forEach((k) => { if (ini[k] !== undefined && ini[k] !== null && ini[k] !== "") ok[k] = ini[k]; });
       if (Object.keys(ok).length) { try { await API.salvarPerfil(ok); Object.assign(S.perfil, ok); } catch (_) {} }
     }
-    aplicarAparencia(S.perfil.estilo, S.perfil.cor);
+    aplicarAparencia(S.perfil.estilo, S.perfil.cor, S.perfil.cor_custom);
+    aplicarMenuRecolhido(lerMenuRecolhido());
     S.brutos = brutos; S.importacoes = importacoes; S.amostras = amostras;
     S.produtos = {}; produtos.forEach((p) => { S.produtos[p.produto_id] = p; });
     reprocessar();
+    await conferirEsgotados();
     S.mes = (S.ultimo || hojeISO()).slice(0, 7);
     S.videosHoje = await API.videos(hojeISO(), hojeISO());
     try { S.refs = await API.referencias(); } catch (_) { S.refs = []; }
@@ -357,6 +500,27 @@
 
   /* Leitura de produtos nos últimos 30 dias com dados:
      sinal (Recorrente, Repetindo, Pontual) e tendência (Novo, Acelerando, Estável, Esfriando). */
+  // Esgotado: o aluno marca; sai das sugestões até o produto vender de novo (aí volta sozinho)
+  const esgotadoDesde = (pid) => (pid && S.produtos[pid] && S.produtos[pid].esgotado_em) || "";
+  async function conferirEsgotados(calado) {
+    const voltaram = [];
+    for (const pid of Object.keys(S.produtos)) {
+      const desde = S.produtos[pid].esgotado_em; if (!desde) continue;
+      const venda = S.pedidos.find((p) => p.produto_id === pid && valido(p) && p.dia > desde);
+      if (!venda) continue;
+      try { await API.salvarProduto({ produto_id: pid, esgotado_em: null }); S.produtos[pid].esgotado_em = null; voltaram.push(venda.nome); } catch (e) { console.warn(e); }
+    }
+    const msg = voltaram.length ? `${voltaram.length === 1 ? voltaram[0] + " voltou" : voltaram.length + " produtos voltaram"} a vender e ${voltaram.length === 1 ? "voltou" : "voltaram"} para as sugestões.` : "";
+    if (msg && !calado) toast(msg);
+    return msg;
+  }
+  async function marcarEsgotado(pid, sim) {
+    const data = sim ? (S.ultimo || hojeISO()) : null;
+    await API.salvarProduto({ produto_id: pid, esgotado_em: data });
+    S.produtos[pid] = { ...(S.produtos[pid] || { produto_id: pid }), esgotado_em: data };
+    toast(sim ? "Marcado como esgotado. Sai das sugestões e volta sozinho quando vender de novo." : "Voltou para as sugestões.");
+    irPara(S.tela, true);
+  }
   function analiseProdutos() {
     const fim = S.ultimo || somaDias(hojeISO(), -1), ini30 = somaDias(fim, -29);
     const w = S.janela, iniA = somaDias(fim, -(w - 1)), fimB = somaDias(iniA, -1), iniB = somaDias(fimB, -(w - 1));
@@ -364,7 +528,7 @@
     const m = new Map();
     S.pedidos.forEach((p) => {
       if (!valido(p) || p.dia < comeco || p.dia > fim) return;
-      const x = m.get(p.chave) || { chave: p.chave, produto_id: p.produto_id, nome: p.nome, original: p.produto, categoria: p.categoria, g30: 0, c30: 0, i30: 0, dias: new Set(), cont: new Set(), a: 0, b: 0, diasA: new Set(), diasB: new Set(), spark: new Array(14).fill(0) };
+      const x = m.get(p.chave) || { chave: p.chave, produto_id: p.produto_id, nome: p.nome, original: p.produto, categoria: p.categoria, subcategoria: p.subcategoria, esgotado: esgotadoDesde(p.produto_id), g30: 0, c30: 0, i30: 0, dias: new Set(), cont: new Set(), a: 0, b: 0, diasA: new Set(), diasB: new Set(), spark: new Array(14).fill(0) };
       if (p.dia >= ini30) { x.g30 += p.g; x.c30 += p.c; x.i30 += p.i; x.dias.add(p.dia); if (p.conteudo_id) x.cont.add(p.conteudo_id); }
       if (p.dia >= iniA) { x.a += p.g; x.diasA.add(p.dia); } else if (p.dia >= iniB) { x.b += p.g; x.diasB.add(p.dia); }
       const k = 13 - Math.round((new Date(fim) - new Date(p.dia)) / 864e5); if (k >= 0) x.spark[k] += p.g;
@@ -384,7 +548,7 @@
   }
   // Onde focar: principais, apostas (começando a vender) e esfriando
   function foco(an) {
-    const l = an.lista, fortes = l.filter((x) => x.dias.size >= 10);
+    const l = an.lista.filter((x) => !x.esgotado), fortes = l.filter((x) => x.dias.size >= 10);
     const principais = (fortes.length >= 3 ? fortes : l).slice(0, 3);
     const ids = new Set(principais.map((x) => x.chave));
     const apostas = l.filter((x) => !ids.has(x.chave) && (x.tend === "Novo" || x.tend === "Acelerando")).sort((a, b) => b.a - a.a).slice(0, 5);
@@ -397,7 +561,7 @@
     const nP = Math.round(N * .4), nC = Math.round(N * .4), nT = N - nP - nC;
     const prin = []; for (let k = 0; k < nP && f.principais.length; k++) prin.push({ produto: f.principais[k % f.principais.length].nome, bloco: "principal" });
     const usados = new Set(f.principais.map((x) => x.chave));
-    const filaC = [...f.apostas, ...an.lista.filter((x) => !usados.has(x.chave) && !f.apostas.includes(x) && x.tend !== "Esfriando")];
+    const filaC = [...f.apostas, ...an.lista.filter((x) => !x.esgotado && !usados.has(x.chave) && !f.apostas.includes(x) && x.tend !== "Esfriando")];
     const com = filaC.slice(0, nC).map((x) => ({ produto: x.nome, bloco: "com_vendas", tag: x.tend === "Novo" || x.tend === "Acelerando" ? x.tend : "" }));
     const testes = S.amostras.filter((a) => a.decisao === "testando").sort((a, b) => String(a.prazo_postar || "9").localeCompare(String(b.prazo_postar || "9"))).slice(0, nT).map((a) => ({ produto: a.produto, bloco: "teste", tag: a.prazo_postar ? `postar até ${dataBR(a.prazo_postar)}` : "amostra" }));
     return { N, nP, nC, nT, prin, com, testes };
@@ -517,10 +681,15 @@
 
   function montarMenu() {
     const atrasadas = S.amostras.filter((a) => a.decisao === "testando" && a.prazo_postar && a.prazo_postar < hojeISO()).length;
-    $("#menuItens").innerHTML = TELAS.map(([id, nome]) => `<button class="menu-item" type="button" data-tela="${id}"${S.tela === id ? ' aria-current="page"' : ""}><svg class="i" viewBox="0 0 24 24">${ICONES[id]}</svg>${nome}${id === "amostras" && atrasadas ? `<span class="bolinha" title="amostras com prazo vencido">${atrasadas}</span>` : ""}</button>`).join("");
+    $("#menuItens").innerHTML = TELAS.map(([id, nome]) => `<button class="menu-item" type="button" data-tela="${id}" data-dica="${nome}"${S.tela === id ? ' aria-current="page"' : ""}><svg class="i" viewBox="0 0 24 24">${ICONES[id]}</svg><span class="rotulo">${nome}</span>${id === "amostras" && atrasadas ? `<span class="bolinha" title="amostras com prazo vencido">${atrasadas}</span>` : ""}</button>`).join("");
     $$('.menu-rodape [data-tela]').forEach((b) => b.toggleAttribute("aria-current", S.tela === b.dataset.tela));
     $$(".assina").forEach((el) => { el.textContent = (S.perfil.nome || "").trim() || "Meu painel"; });
-    $("#quem").textContent = [S.perfil.nome, S.perfil.tiktok].filter(Boolean).join(" · ") || (S.user && S.user.email) || "";
+    const nomeQuem = (S.perfil.nome || "").trim() || (S.user && S.user.email) || "", arroba = (S.perfil.tiktok || "").trim();
+    $("#quem").innerHTML = `<b>${esc(nomeQuem)}</b>${arroba ? `<span>${esc(arroba)}</span>` : ""}`;
+    const ini = nomeQuem.split(/[\s@.]+/).filter(Boolean);
+    $("#avatar").textContent = ((ini[0] || "?")[0] + (ini.length > 1 ? ini[ini.length - 1][0] : "")).toUpperCase();
+    $("#marcaSinal").textContent = (((S.perfil.nome || "").trim() || "M")[0]).toUpperCase();
+    $("#sair").dataset.dica = nomeQuem ? "Sair (" + nomeQuem + ")" : "Sair";
     $("#telaNomeCel").textContent = NOMES[S.tela] || "";
   }
   async function irPara(tela, manterRolagem) {
@@ -533,6 +702,35 @@
     if (manterRolagem) { el.style.minHeight = ""; window.scrollTo(0, y); }
   }
   const semDados = () => `<div class="card"><div class="card-topo"><h2>Comece importando seus pedidos</h2></div><p class="vazio">Ainda não tem nenhum pedido aqui. Exporte o relatório de pedidos de afiliado do TikTok Shop e suba na aba Importar.</p><button class="btn" type="button" data-tela="importar">Importar agora</button></div>`;
+  /* ---------- App no celular e lembrete da manhã ---------- */
+  const noCelular = () => /android|iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /macintosh/i.test(navigator.userAgent));
+  const ehIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /macintosh/i.test(navigator.userAgent));
+  const instalado = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  let pedidoInstalar = null;
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); pedidoInstalar = e; });
+  window.addEventListener("appinstalled", () => { pedidoInstalar = null; toast("Pronto: o painel está na tela inicial do celular."); });
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  const lerDia = (k) => { try { return localStorage.getItem(k) === hojeISO(); } catch (_) { return false; } };
+  const marcarDia = (k) => { try { localStorage.setItem(k, hojeISO()); } catch (_) {} };
+  function comoInstalar() {
+    if (instalado()) return `<p class="ok-msg">O painel já está instalado como app neste aparelho.</p>`;
+    if (pedidoInstalar) return `<p class="frase" style="margin-top:0">Um toque e ele vira app, com ícone na tela inicial.</p><button class="btn pequeno" type="button" data-acao="instalar-app">Instalar no celular</button>`;
+    if (ehIOS()) return `<ol class="passos"><li>Abra este endereço no <b>Safari</b> (no Chrome do iPhone não aparece a opção).</li><li>Toque no botão <b>Compartilhar</b> (o quadrado com a seta para cima).</li><li>Role e toque em <b>Adicionar à Tela de Início</b>, depois em <b>Adicionar</b>.</li></ol>`;
+    return `<ol class="passos"><li>Abra este endereço no <b>Chrome</b> do celular.</li><li>Toque nos <b>três pontinhos</b> lá em cima.</li><li>Toque em <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b>).</li></ol>`;
+  }
+  function cartaoInstalar() {
+    if (!noCelular() || instalado() || lerDia("painel-sem-instalar")) return "";
+    return `<div class="card aviso-app"><div class="card-topo"><h2>Use o painel como app</h2><span class="espaco"></span><button class="link" type="button" data-acao="fechar-instalar">Agora não</button></div>${comoInstalar()}</div>`;
+  }
+  function lembreteManha() {
+    const h = new Date().getHours();
+    if (h < 5 || h >= 12 || lerDia("painel-sem-lembrete")) return "";
+    const hoje = hojeISO(), subiuHoje = (S.importacoes || []).some((i) => { const d = new Date(i.importado_em); return !isNaN(d) && `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` === hoje; });
+    if (subiuHoje) return "";   // de manhã, até subir o extrato do dia
+    return `<div class="aviso lembrete-manha"><span><b>Bom dia! Hora de subir o extrato.</b> Baixe o relatório de pedidos no app do TikTok e suba aqui: o Hoje e as sugestões do dia ficam certinhos.</span><span class="controles"><button class="btn pequeno" type="button" data-tela="importar">Subir agora</button><button class="link" type="button" data-acao="fechar-lembrete">Agora não</button></span></div>`;
+  }
+  // Voltou pro app (ex.: abriu de manhã): redesenha o Hoje para o lembrete aparecer
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && S.tela === "hoje" && S.user && !$("#app").hidden) irPara("hoje", true); });
   function avisoImport() {
     if (!S.ultimo) return "";
     const dias = Math.round((new Date(hojeISO()) - new Date(S.ultimo)) / 864e5);
@@ -551,7 +749,7 @@
     const an = analiseProdutos(), f = foco(an), plano = planoDoDia(an, f);
     const vids = S.videosHoje, feitos = vids.filter((v) => v.status !== "rascunho").length;
     const rotRef = ref === hoje ? "Hoje até agora" : ref === somaDias(hoje, -1) ? "Ontem" : "Último dia: " + dataBR(ref);
-    const meta = +S.perfil.meta_gmv || 0, est = document.documentElement.dataset.estilo;
+    const meta = +S.perfil.meta_gmv || 0, est = LAYOUT_HOJE[document.documentElement.dataset.estilo] || "classico";
     const kVid = `<p class="rot">Vídeos de hoje</p><div class="val">${feitos} de ${plano.N}</div><div class="barra"><i style="width:${Math.min(100, feitos / plano.N * 100).toFixed(1)}%"></i></div><small>${vids.length ? `${plural(vids.length, "planejado", "planejados")}, ${plural(feitos, "agendado ou postado", "agendados ou postados")}` : "Nenhum vídeo planejado ainda."}</small>`;
     let topo;
     if (est === "grafico") topo = `<div class="grade g21">
@@ -574,8 +772,9 @@
         <div class="card kpi">${kVid}</div>
       </div>
       ${cardMeta(per, tMes)}`;
-    const item = (x, extra) => `<li><span class="nome" title="${esc(x.nome)}">${esc(x.nome)}</span><span class="val">${real(x.c30)}</span><small>${extra}</small></li>`;
-    el.innerHTML = cab + avisoImport() + topo + `
+    const item = (x, extra) => `<li><span class="nome" title="${esc(x.nome)}">${esc(x.nome)}</span><span class="val">${real(x.c30)}</span><small>${extra}${x.produto_id ? ` · <button class="link esg" type="button" data-acao="esgotado" data-id="${esc(x.produto_id)}">esgotou?</button>` : ""}</small></li>`;
+    const esgotados = an.lista.filter((x) => x.esgotado);
+    el.innerHTML = cab + (lembreteManha() || avisoImport()) + cartaoInstalar() + topo + `
       <div class="grade g3">
         <div class="card"><div class="card-topo"><h2>Principais</h2><span class="sub">o que mais te paga</span></div>
           <ul class="lista-foco">${f.principais.map((x) => item(x, `${x.dias.size} dias com venda em 30 · ${pct(x.share)} da comissão`)).join("") || '<p class="vazio">Ainda sem vendas nos últimos 30 dias.</p>'}</ul>
@@ -585,7 +784,8 @@
           <p class="frase">Produto novo ou que vendeu 1,5 vez mais que nos ${S.janela} dias anteriores, em pelo menos 3 dias diferentes. Grave mais desses.</p></div>
         <div class="card"><div class="card-topo"><h2>Esfriando</h2><span class="sub">perdeu força</span></div>
           <ul class="lista-foco">${f.esfriando.map((x) => item(x, `<span class="selo desce">▼ ${pct(Math.abs(x.var))}</span> ${real(x.a)} nos últimos ${S.janela} dias contra ${real(x.b)} antes`)).join("") || '<p class="vazio">Nenhum produto caindo forte. Bom sinal.</p>'}</ul>
-          <p class="frase">Vendeu metade ou menos que antes. Teste gancho novo ou troque por um da coluna do meio.</p></div>
+          <p class="frase">Vendeu metade ou menos que antes. Teste gancho novo ou troque por um da coluna do meio. Se for falta de estoque, toque em "esgotou?".</p>
+          ${esgotados.length ? `<div class="esgotados"><p class="lbl">Esgotados · fora das sugestões</p>${esgotados.map((x) => `<span class="chip">${esc(x.nome)} <button class="link" type="button" data-acao="desfazer-esgotado" data-id="${esc(x.produto_id)}" aria-label="Voltar ${esc(x.nome)} para as sugestões">voltar</button></span>`).join("")}<p class="frase" style="margin-top:6px">Voltam sozinhos quando venderem de novo.</p></div>` : ""}</div>
       </div>
       <div class="grade g21">
         <div class="card"><div class="card-topo"><h2>Plano dos ${plano.N} vídeos de hoje</h2><span class="espaco"></span><button class="btn pequeno" type="button" data-acao="lancar-plano"${vids.length >= plano.N ? " disabled" : ""}>${vids.length ? "Completar o dia" : "Lançar no dia"}</button></div>
@@ -655,15 +855,15 @@
   }
 
   /* ---------- TODO O PERÍODO ---------- */
-  const CORES_ROSCA = ["#009994", "#FFC24D", "#0063C7", "#00C9B0", "#A06CD5", "#E8743B"];
+  const CORES_ROSCA = ["var(--g1)", "var(--g2)", "var(--g3)", "var(--g4)", "var(--g5)", "var(--g6)"];
   function rosca(itens) {
     const tot = itens.reduce((a, [, v]) => a + v, 0);
     if (!tot) return '<p class="vazio">Sem vendas válidas no período.</p>';
     let l = [...itens].sort((a, b) => b[1] - a[1]);
     if (l.length > 6) { const resto = l.slice(5).reduce((a, [, v]) => a + v, 0); l = [...l.slice(0, 5), ["Outros", resto]]; }
     const R = 70, C = 2 * Math.PI * R; let acc = 0;
-    const arcos = l.map(([n, v], i) => { const f = v / tot, d = `<circle r="${R}" cx="90" cy="90" fill="none" stroke="${CORES_ROSCA[i]}" stroke-width="28" stroke-dasharray="${(f * C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-acc * C).toFixed(2)}" transform="rotate(-90 90 90)"><title>${esc(n)}: ${pct(f * 100)} (${real(v)})</title></circle>`; acc += f; return d; }).join("");
-    const sep = l.length > 1 ? l.map((_, i) => { const ang = (l.slice(0, i).reduce((a, [, v]) => a + v, 0) / tot) * 2 * Math.PI - Math.PI / 2; return `<line x1="${90 + 55 * Math.cos(ang)}" y1="${90 + 55 * Math.sin(ang)}" x2="${90 + 85 * Math.cos(ang)}" y2="${90 + 85 * Math.sin(ang)}" stroke="#fff" stroke-width="2"/>`; }).join("") : "";
+    const arcos = l.map(([n, v], i) => { const f = v / tot, d = `<circle r="${R}" cx="90" cy="90" fill="none" style="stroke:${CORES_ROSCA[i]}" stroke-width="28" stroke-dasharray="${(f * C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-acc * C).toFixed(2)}" transform="rotate(-90 90 90)"><title>${esc(n)}: ${pct(f * 100)} (${real(v)})</title></circle>`; acc += f; return d; }).join("");
+    const sep = l.length > 1 ? l.map((_, i) => { const ang = (l.slice(0, i).reduce((a, [, v]) => a + v, 0) / tot) * 2 * Math.PI - Math.PI / 2; return `<line x1="${90 + 55 * Math.cos(ang)}" y1="${90 + 55 * Math.sin(ang)}" x2="${90 + 85 * Math.cos(ang)}" y2="${90 + 85 * Math.sin(ang)}" style="stroke:var(--card)" stroke-width="2"/>`; }).join("") : "";
     const pct2 = (f) => (f * 100).toFixed(2).replace(".", ",") + "%";
     return `<div class="rosca"><svg viewBox="0 0 180 180" role="img" aria-label="Divisão das vendas">${arcos}${sep}</svg>
       <ul class="rosca-leg">${l.map(([n, v], i) => `<li><i style="background:${CORES_ROSCA[i]}"></i><span class="n">${esc(n)}</span><b>${pct2(v / tot)}</b><small>${real(v)}</small></li>`).join("")}</ul></div>`;
@@ -713,6 +913,10 @@
   }
 
   /* ---------- PRODUTOS ---------- */
+  function seletorCat(x) {
+    const atual = x.categoria + "|" + (x.subcategoria || "");
+    return `<select class="inp sel-cat" data-acao="mudar-cat" data-id="${esc(x.produto_id)}" aria-label="Categoria de ${esc(x.nome)}">${Object.entries(CATS_SUB).map(([k, [n, subs]]) => `<optgroup label="${esc(n)}"><option value="${k}|"${atual === k + "|" ? " selected" : ""}>${esc(n)}${subs.length ? " (geral)" : ""}</option>${subs.map((sb) => `<option value="${k}|${esc(sb)}"${atual === k + "|" + sb ? " selected" : ""}>${esc(sb)}</option>`).join("")}</optgroup>`).join("")}</select>`;
+  }
   async function telaProdutos(el) {
     const cab = `<div class="cabeca"><div><h1>Produtos</h1><p>Últimos 30 dias com dados${S.ultimo ? `, até ${dataBR(S.ultimo)}` : ""}. Ordenado pela comissão.</p></div></div>`;
     if (!S.pedidos.length) { el.innerHTML = cab + semDados(); return; }
@@ -729,16 +933,17 @@
       <div class="card"><div class="card-topo"><div class="chips">${[["todas", "Todas"], ...Object.entries(CATS).filter(([k]) => presentes.has(k))].map(([k, n]) => `<button class="chip" type="button" data-acao="cat" data-cat="${k}" aria-pressed="${S.filtroCat === k}">${esc(n)}</button>`).join("")}</div>
         <span class="espaco"></span><input class="inp busca" id="buscaProd" type="search" placeholder="Buscar produto" value="${esc(S.busca)}">
         <select class="inp" id="ordemProd" style="width:auto">${[["c30", "Maior comissão"], ["g30", "Maior venda"], ["dias", "Mais dias vendendo"], ["var", "Mais crescendo"]].map(([k, n]) => `<option value="${k}"${S.ordem === k ? " selected" : ""}>${n}</option>`).join("")}</select></div>
-        <div class="tabela-caixa"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Sinal</th><th>Tendência</th><th>14 dias</th><th class="num">Dias c/ venda</th><th class="num">Vendas</th><th class="num">Comissão</th><th class="num">% do total</th><th class="num">% inelegível</th></tr></thead><tbody>
+        <div class="tabela-caixa"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Estoque</th><th>Sinal</th><th>Tendência</th><th>14 dias</th><th class="num">Dias c/ venda</th><th class="num">Vendas</th><th class="num">Comissão</th><th class="num">% do total</th><th class="num">% inelegível</th></tr></thead><tbody>
         ${l.map((x) => { const q = ine.get(x.chave) || { t: 0, i: 0 }, pi = q.t ? q.i / q.t * 100 : 0; return `<tr${x.acum - x.share < 80 ? ' style="background:rgba(168,134,74,.06)"' : ""}>
           <td><div class="td-nome" title="${esc(x.original || x.nome)}">${esc(x.nome)}</div></td>
-          <td>${x.produto_id ? `<select class="inp" data-acao="mudar-cat" data-id="${esc(x.produto_id)}" aria-label="Categoria">${Object.entries(CATS).map(([k, n]) => `<option value="${k}"${x.categoria === k ? " selected" : ""}>${n}</option>`).join("")}</select>` : esc(CATS[x.categoria])}</td>
+          <td>${x.produto_id ? seletorCat(x) : esc(CATS[x.categoria] + (x.subcategoria ? " · " + x.subcategoria : ""))}</td>
+          <td>${x.produto_id ? (x.esgotado ? `<span class="selo alerta">Esgotado</span> <button class="link" type="button" data-acao="desfazer-esgotado" data-id="${esc(x.produto_id)}">voltou</button>` : `<button class="link" type="button" data-acao="esgotado" data-id="${esc(x.produto_id)}">marcar esgotado</button>`) : ""}</td>
           <td><span class="selo ${x.sinal === "Recorrente" ? "sobe" : x.sinal === "Repetindo" ? "novo" : ""}">${x.sinal}</span></td>
           <td>${tendSelo(x)}</td><td>${sparkline(x.spark)}</td>
           <td class="num">${x.dias.size}</td><td class="num">${real(x.g30)}</td><td class="num"><b>${real(x.c30)}</b></td><td class="num">${pct(x.share)}</td>
-          <td class="num"${pi > 15 ? ' style="color:var(--vermelho);font-weight:700"' : ""}>${pct(pi)}</td></tr>`; }).join("") || '<tr><td colspan="10"><p class="vazio">Nenhum produto com esse filtro.</p></td></tr>'}
+          <td class="num"${pi > 15 ? ' style="color:var(--vermelho);font-weight:700"' : ""}>${pct(pi)}</td></tr>`; }).join("") || '<tr><td colspan="11"><p class="vazio">Nenhum produto com esse filtro.</p></td></tr>'}
         </tbody></table></div>
-        <p class="frase">Linhas em destaque: os produtos que juntos fazem 80% da sua comissão. Recorrente: vendeu em 10 dias ou mais, por 2 vídeos ou mais (não depende de um vídeo só). Repetindo: 4 dias ou mais. Tendência compara os últimos ${S.janela} dias com os ${S.janela} anteriores.</p></div>`;
+        <p class="frase">Linhas em destaque: os produtos que juntos fazem 80% da sua comissão. Recorrente: vendeu em 10 dias ou mais, por 2 vídeos ou mais (não depende de um vídeo só). Repetindo: 4 dias ou mais. Tendência compara os últimos ${S.janela} dias com os ${S.janela} anteriores. A categoria vem do nome do produto: se errar, troque na lista. Esgotado sai das sugestões e volta sozinho quando vender de novo.</p></div>`;
     $("#buscaProd").addEventListener("input", (e) => { S.busca = e.target.value; clearTimeout(telaProdutos.t); telaProdutos.t = setTimeout(() => { telaProdutos(el).then(() => { const b = $("#buscaProd"); b.focus(); b.setSelectionRange(b.value.length, b.value.length); }); }, 250); });
     $("#ordemProd").addEventListener("change", (e) => { S.ordem = e.target.value; telaProdutos(el); });
   }
@@ -820,12 +1025,13 @@
   async function telaImportar(el) {
     el.innerHTML = `<div class="cabeca"><div><h1>Importar pedidos</h1><p>Suba o relatório de afiliado do TikTok Shop. Pode subir de novo sempre que quiser: pedido repetido só é atualizado.</p></div></div>
       <div class="grade g21">
-        <label class="solta" id="solta" for="arquivo"><strong>Solte o arquivo aqui</strong><p>ou clique para escolher. Aceita .xlsx e .csv</p><span class="btn">Escolher arquivo</span><input id="arquivo" type="file" accept=".xlsx,.xls,.csv" hidden></label>
-        <div class="card"><div class="card-topo"><h2>Como exportar</h2></div><ol class="passos">
-          <li>Abra o TikTok Shop pelo computador e entre na <b>Central de afiliados</b>.</li>
+        <label class="solta" id="solta" for="arquivo"><strong>${noCelular() ? "Escolha o arquivo" : "Solte o arquivo aqui"}</strong><p>${noCelular() ? "Toque e pegue o relatório em Arquivos ou Downloads." : "ou clique para escolher."} Aceita .xlsx e .csv</p><span class="btn">Escolher arquivo</span><input id="arquivo" type="file" accept=".xlsx,.xls,.csv" hidden></label>
+        <div class="card"><div class="card-topo"><h2>Como baixar o relatório</h2><span class="sub">pelo celular</span></div><ol class="passos">
+          <li>No <b>app do TikTok</b>, entre na <b>Central de afiliados</b> (a central não abre no computador).</li>
           <li>Vá em <b>Pedidos</b> e escolha o período (até 90 dias).</li>
-          <li>Clique em <b>Exportar</b> e baixe o arquivo.</li>
-          <li>Suba aqui. Faça isso 1 vez por semana, ou todo dia se quiser o Hoje sempre em dia.</li></ol></div>
+          <li>Toque em <b>Exportar</b>. O arquivo vai para <b>Arquivos</b> (iPhone) ou <b>Downloads</b> (Android).</li>
+          <li>Aqui no painel, toque em <b>Escolher arquivo</b> e pegue o relatório. Faça isso toda manhã: o Hoje e as sugestões ficam em dia.</li></ol>
+          <p class="frase">Dica: instale o painel como app (em Meu perfil). Aí, de manhã, ele já te lembra de subir o extrato.</p></div>
       </div>
       <p class="aviso neutro" id="progresso" hidden></p>
       <div class="card"><div class="card-topo"><h2>Arquivos importados</h2></div>
@@ -885,16 +1091,17 @@
       diz("Atualizando o painel...");
       [S.brutos, S.importacoes] = await Promise.all([API.pedidos(), API.importacoes()]);
       reprocessar(); S.mes = (S.ultimo || hojeISO()).slice(0, 7);
-      toast(`Pronto: ${plural(novas, "pedido novo", "pedidos novos")} e ${plural(lista.length - novas, "atualizado", "atualizados")}.${semData ? ` ${semData} linhas sem data ficaram de fora.` : ""}`);
+      const voltaram = await conferirEsgotados(true);
+      toast(`Pronto: ${plural(novas, "pedido novo", "pedidos novos")} e ${plural(lista.length - novas, "atualizado", "atualizados")}.${semData ? ` ${semData} linhas sem data ficaram de fora.` : ""}${voltaram ? " " + voltaram : ""}`);
       irPara("hoje");
     } catch (e) { console.error(e); diz(traduz(e)); toast(traduz(e), true); }
   }
 
   /* ---------- PERFIL ---------- */
   async function telaPerfil(el) {
-    const p = S.perfil, sug = sugestaoMeta(), est = document.documentElement.dataset.estilo, cor = document.documentElement.dataset.cor;
+    const p = S.perfil, sug = sugestaoMeta();
     el.innerHTML = `<div class="cabeca"><div><h1>Meu perfil</h1><p>Seus dados, suas metas e o jeito que o painel aparece pra você.</p></div></div>
-      <div class="grade g2 alto">
+      <div class="grade">
       <div class="card"><div class="card-topo"><h2>Dados e metas</h2></div><form class="form" id="formPerfil">
         <div class="dupla"><div><label class="lbl" for="pNome">Nome</label><input class="inp" id="pNome" value="${esc(p.nome)}"></div>
           <div><label class="lbl" for="pApelido">Como quero ser chamado</label><input class="inp" id="pApelido" value="${esc(p.apelido)}" placeholder="ex.: Ju"></div></div>
@@ -905,13 +1112,11 @@
         ${sug ? `<div class="sugestao"><span class="rot">Sugestão pelo seu crescimento</span><div class="meta-num">${real(sug.valor)}</div><p class="frase">${esc(sug.motivo)}</p><button class="btn sec pequeno" type="button" id="pUsarSug">Usar a sugestão</button></div>` : `<p class="frase">Depois que você importar seus pedidos, o painel sugere uma meta pelo seu crescimento.</p>`}
         <div><button class="btn" type="submit">Salvar</button></div>
       </form></div>
-      <div class="card"><div class="card-topo"><h2>Aparência</h2><span class="sub">muda na hora</span></div>
-        <p class="lbl">Estilo do painel</p>
-        <div class="estilos">${Object.entries(ESTILOS).map(([k, [n, d]]) => `<button type="button" class="estilo-op" data-acao="estilo" data-v="${k}" aria-pressed="${est === k}"><span class="mini mini-${k}"><i></i><i></i><i></i></span><b>${n}</b><small>${d}</small></button>`).join("")}</div>
-        <p class="lbl" style="margin-top:18px">Cor</p>
-        <div class="cores">${Object.entries(CORES).map(([k, [n, c1, c2]]) => `<button type="button" class="cor-op" data-acao="cor" data-v="${k}" aria-pressed="${cor === k}" title="${n}"><span style="background:linear-gradient(135deg, ${c1} 50%, ${c2} 50%)"></span>${n}</button>`).join("")}</div>
-        <p class="frase">Abra a tela Hoje depois de trocar: é onde os estilos mudam mais.</p>
-      </div></div>`;
+      </div>
+      <div class="card" id="cardAparencia"></div>
+      <div class="card" id="cardApp"><div class="card-topo"><h2>App no celular</h2><span class="sub">ícone na tela inicial e lembrete de manhã pra subir o extrato</span></div>${comoInstalar()}</div>`;
+    S.ap = { estilo: normEstilo(p.estilo || document.documentElement.dataset.estilo), cor: normPaleta(p.cor || document.documentElement.dataset.paleta), custom: normCustom(p.cor_custom) };
+    desenharAparencia();
     const u = $("#pUsarSug"); if (u) u.addEventListener("click", () => { $("#pMetaG").value = sug.valor; toast("Sugestão colocada. Clique em Salvar."); });
     $("#formPerfil").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -921,6 +1126,59 @@
         meta_videos: Math.min(60, Math.max(1, parseInt($("#pMetaV").value, 10) || 15)), meta_gmv: Number($("#pMetaG").value) || null };
       try { await API.salvarPerfil(novo); Object.assign(S.perfil, novo); montarMenu(); toast("Perfil salvo."); } catch (er) { toast(traduz(er), true); }
     });
+  }
+
+  /* ---------- APARÊNCIA: escolher estilo, paleta e ver a prévia ---------- */
+  // Prévia feita com as peças reais do painel (cartões, números, gráfico, lista) e os números do próprio usuário
+  function dadosPrevia() {
+    const ref = (S.ultimo || hojeISO()).slice(0, 7), per = periodo(ref), t = somar(entre(per.ini, per.fim));
+    const dias = []; for (let k = 13; k >= 0; k--) dias.push(somaDias(S.ultimo || hojeISO(), -k));
+    const porDia = dias.map((d) => S.pedidos.filter((x) => x.dia === d && valido(x)).reduce((a, x) => a + x.g, 0));
+    const an = S.pedidos.length ? analiseProdutos().lista.slice().sort((a, b) => b.c30 - a.c30).slice(0, 3) : [];
+    const temDados = porDia.some((v) => v > 0);
+    return { t, porDia: temDados ? porDia : [3, 5, 4, 6, 5, 7, 6, 8, 7, 9, 8, 10, 9, 11], exemplo: !temDados, an, N: +S.perfil.meta_videos || 15, feitos: (S.videosHoje || []).filter((v) => v.status !== "rascunho").length };
+  }
+  function amostra(estilo, cor, custom, d) {
+    const nome = esc((S.perfil.apelido || "").trim() || (S.perfil.nome || "").split(" ")[0] || "você"), max = Math.max(...d.porDia, 1);
+    const barras = d.porDia.map((v, i) => { const h = Math.max(2, v / max * 70); return `<rect class="${i === d.porDia.length - 1 ? "b-hoje" : "b-atual"}" x="${i * 20 + 3}" y="${78 - h}" width="13" height="${h}" rx="3"/>`; }).join("");
+    const lista = d.an.length ? d.an.map((x) => `<li><span class="nome">${esc(x.nome)}</span><span class="val">${realCurto(x.c30)}</span></li>`).join("") : "<li><span class=\"nome\">Seus produtos aparecem aqui</span><span class=\"val\">-</span></li>";
+    const c = normCustom(custom);
+    return `<div class="tema-amostra" data-estilo="${estilo}" data-paleta="${cor}"${c ? ` style="--p-principal:${c}"` : ""}>
+      <div class="ta-topo"><div><p class="lbl" style="margin:0">Hoje</p><h3>Bom dia, <em>${nome}</em>.</h3></div><span class="btn pequeno">Lançar no dia</span></div>
+      <div class="ta-kpis">
+        <div class="card kpi escuro"><p class="rot">Vendas no mês</p><div class="val">${realCurto(d.t.g)}</div></div>
+        <div class="card kpi"><p class="rot">Comissão</p><div class="val">${realCurto(d.t.c)}</div><span class="selo sobe">no mês</span></div>
+        <div class="card kpi"><p class="rot">Vídeos de hoje</p><div class="val">${d.feitos} de ${d.N}</div><div class="barra"><i style="width:${Math.min(100, d.feitos / d.N * 100).toFixed(0)}%"></i></div></div>
+      </div>
+      <div class="ta-grade">
+        <div class="card"><div class="card-topo"><h2>Vendas por dia</h2><span class="sub">${d.exemplo ? "exemplo" : "14 dias"}</span></div><svg class="graf" viewBox="0 0 280 82" aria-hidden="true">${barras}</svg></div>
+        <div class="card"><div class="card-topo"><h2>Principais</h2></div><ul class="lista-foco">${lista}</ul><div class="chips" style="margin-top:10px"><span class="chip" aria-pressed="true">Todas</span><span class="chip">Tech</span></div></div>
+      </div></div>`;
+  }
+  function desenharAparencia() {
+    const box = $("#cardAparencia"); if (!box) return;
+    const a = S.ap, d = dadosPrevia(), atual = document.documentElement;
+    const salvo = normEstilo(S.perfil.estilo || atual.dataset.estilo) === a.estilo && normPaleta(S.perfil.cor || atual.dataset.paleta) === a.cor && normCustom(S.perfil.cor_custom) === a.custom;
+    const corBase = a.custom || PALETAS[a.cor][1][0];
+    box.innerHTML = `<div class="card-topo"><h2>Aparência</h2><span class="sub">escolha o estilo e a paleta: tudo combina com tudo</span></div>
+      <div class="ap-passo"><p class="lbl"><b>1</b>Estilo</p>
+        <div class="ap-estilos">${Object.entries(ESTILOS).map(([k, [n, desc]]) => `<button type="button" class="ap-estilo" data-acao="ap-estilo" data-v="${k}" aria-pressed="${a.estilo === k}">${amostra(k, a.cor, a.custom, d)}<b>${n}</b><small>${desc}</small></button>`).join("")}</div></div>
+      <div class="ap-passo"><p class="lbl"><b>2</b>Paleta</p>
+        <div class="ap-paletas">${Object.entries(PALETAS).map(([k, [n, cs]]) => `<button type="button" class="ap-paleta" data-acao="ap-paleta" data-v="${k}" aria-pressed="${a.cor === k}"><span class="ap-cores">${cs.map((x) => `<i style="background:${x}"></i>`).join("")}</span>${n}</button>`).join("")}</div>
+        <div class="ap-custom"><label for="apCor">Cor principal personalizada</label><input type="color" id="apCor" value="${corBase}">${a.custom ? `<button class="link" type="button" data-acao="ap-sem-custom">usar a cor da paleta</button>` : `<span class="sub" style="color:var(--muted)">opcional</span>`}</div></div>
+      <div class="ap-passo ap-previa"><p class="lbl"><b>3</b>Prévia ${salvo ? "· é o que você está usando" : "· ainda não aplicado"}</p>
+        ${amostra(a.estilo, a.cor, a.custom, d)}
+        <div class="ap-acoes"><button class="btn sec pequeno" type="button" data-acao="ap-restaurar">Restaurar padrão</button><button class="btn pequeno" type="button" data-acao="ap-aplicar"${salvo ? " disabled" : ""}>Aplicar estilo</button></div></div>`;
+    const inp = $("#apCor");
+    inp.addEventListener("input", () => { $$("#cardAparencia .tema-amostra").forEach((x) => x.style.setProperty("--p-principal", inp.value)); });
+    inp.addEventListener("change", () => { S.ap.custom = normCustom(inp.value); desenharAparencia(); });
+  }
+  async function salvarAparencia(estilo, cor, custom) {
+    aplicarAparencia(estilo, cor, custom);
+    const novo = { estilo, cor, cor_custom: custom };
+    Object.assign(S.perfil, novo);
+    try { await API.salvarPerfil(novo); return true; }
+    catch (e) { console.warn(e); toast("Apliquei neste aparelho. Para guardar na sua conta, atualize o banco do painel (peça ao Claude: \"saiu versão nova do painel\").", true); return false; }
   }
 
   /* ---------- COMEÇANDO (ainda sem vendas) ---------- */
@@ -966,7 +1224,7 @@
   }
 
   /* ---------- CRIAR (modelar copy) ---------- */
-  const MUDA = [["gancho", "Gancho", "a primeira frase, que para o dedo"], ["jeito", "Jeito de falar", "as palavras e o ritmo, pro meu jeito"], ["historia", "História", "a situação contada no meio"], ["dor", "Dor de abertura", "o problema que abre o vídeo"], ["oferta", "Oferta", "preço, condição e motivo pra comprar agora"]];
+  const MUDA = [["gancho", "Gancho", "a primeira frase, que para o dedo"], ["jeito", "Jeito de falar", "as palavras e o ritmo, pro meu jeito"], ["historia", "História", "a situação contada no meio"], ["dor", "Dor de abertura", "o problema que abre o vídeo"], ["oferta", "Oferta", "preço, condição e motivo pra comprar agora"], ["antecipacao", "Antecipação e curiosidade", "gancho forte e descoberta guardada até o fim"]];
   const autorDo = (link) => { const m = String(link || "").match(/@([\w.]+)/); return m ? "@" + m[1] : ""; };
   const tituloDa = (r) => r.titulo || (r.texto ? r.texto.split(/\s+/).slice(0, 12).join(" ") + "…" : "Referência TikTok Shop");
   function nomesProdutos() { return [...new Set([...analiseProdutos().lista.map((x) => x.nome), ...S.amostras.map((a) => a.produto)])]; }
@@ -998,8 +1256,15 @@ FALA: o que eu falo, do jeito que eu falo
 IMAGEM: o que aparece na tela (enquadramento, produto, demonstração)
 TEXTO NA TELA: só se tiver (na cena 1, a headline do gancho)
 3 GANCHOS ALTERNATIVOS: um por linha.
-
-REGRAS: entregue tudo agora, sem fazer perguntas antes: o que faltar fica [entre colchetes] para eu ajustar. Não copie frases da referência, só a estrutura. Nada de promessa de cura, resultado garantido, preço de antes falso ou urgência que a loja não deu. Não invente preço nem característica: o que não souber fica [entre colchetes]. Sem emoji e sem travessão.`;
+${f.muda.antecipacao ? `
+TÉCNICA DA COPY (antecipação, curiosidade e retenção):
+- Abra com um Big Hook: a promessa central que faz a pessoa querer ver até o fim. Use curiosidade, contraste, surpresa, um problema do dia a dia, uma descoberta inesperada, uma demonstração intrigante ou uma quebra de expectativa.
+- Não entregue tudo no começo. Siga a ordem: desperta curiosidade, cria expectativa, desenvolve a situação, traz informação nova, entrega a descoberta prometida, liga a descoberta ao benefício e ao carrinho.
+- Toda curiosidade aberta é respondida no próprio vídeo, com algo que valha a espera. Nada de suspense sem recompensa.
+- A retenção trabalha pra venda: a descoberta é um benefício ou diferencial real do produto, e logo depois vem a chamada pro carrinho.
+- Não é listar características: é uma história curta que faz a pessoa querer saber o que vem a seguir.
+` : ""}
+REGRAS: entregue tudo agora, sem fazer perguntas antes: o que faltar fica [entre colchetes] para eu ajustar. Não copie frases da referência, só a estrutura. Nada de promessa de cura, resultado garantido, preço de antes falso ou urgência que a loja não deu. Não invente preço nem característica: o que não souber fica [entre colchetes]. Se eu pedir mais de um roteiro, abra cada um com uma linha ROTEIRO 1, ROTEIRO 2 (e assim por diante), cada um com as suas cenas. Sem emoji e sem travessão.`;
   }
   // Lê a copy do Claude e separa as cenas. Entende "CENA 1 / FALA: / IMAGEM:", partes "[1. GANCHO]" e títulos "1. Gancho".
   function cenasDaCopy(txt) {
@@ -1034,15 +1299,34 @@ REGRAS: entregue tudo agora, sem fazer perguntas antes: o que faltar fica [entre
     };
     return { cenas: cenas.map((c) => ({ parte: parte(c.parte), fala: c.fala.join(" "), imagem: c.imagem.join(" "), texto: c.texto.join(" ") })).filter((c) => c.fala || c.imagem), ganchos };
   }
-  function abrirRoteiro(txt, produto) {
-    const { cenas, ganchos } = cenasDaCopy(txt);
-    const palavras = cenas.reduce((n, c) => n + (c.fala.replace(/\[[^\]]*\]/g, "").match(/\S+/g) || []).length, 0), seg = Math.round(palavras / 3.25);
+  // Uma copy pode trazer mais de um roteiro ("ROTEIRO 1", "VERSÃO 2", "OPÇÃO B"... ou a CENA 1 recomeçando). Separa cada um.
+  function separarRoteiros(txt) {
+    const linhas = String(txt || "").replace(/\r/g, "").split("\n");
+    const limpa = (l) => l.replace(/\*\*|__/g, "").replace(/^#+\s*/, "").trim();
+    const cab = /^(?:ROTEIRO|VERS[AÃ]O|OP[CÇ][AÃ]O|VARIA[CÇ][AÃ]O|V[IÍ]DEO|COPY)(?:\s+NOVO)?\s*(?:N[ºo°.]\s*)?(\d{1,2}|[A-E])(?![\wÀ-ú])\s*[:.)\-–—]?\s*(.*)$/i;
+    let marcas = [];
+    linhas.forEach((l, k) => { const m = limpa(l).match(cab); if (m) marcas.push({ k, nome: m[2].replace(/[:\-–—]\s*$/, "").trim() }); });
+    if (marcas.length < 2) {   // sem títulos: a CENA 1 recomeçando abre um roteiro novo (sem nome: fica Roteiro 1, 2, 3)
+      marcas = []; let viuCena = false;
+      linhas.forEach((l, k) => { const t = limpa(l); if (/^CENA\s*0?1\b/i.test(t)) { marcas.push({ k, nome: "" }); viuCena = true; } });
+      if (!viuCena || marcas.length < 2) marcas = [];
+    }
+    if (marcas.length < 2) return [{ titulo: "", ...cenasDaCopy(txt) }];
+    const lista = marcas.map((m, n) => ({ titulo: m.nome, ...cenasDaCopy(linhas.slice(m.k, n + 1 < marcas.length ? marcas[n + 1].k : linhas.length).join("\n")) })).filter((r) => r.cenas.length);
+    return lista.length ? lista : [{ titulo: "", ...cenasDaCopy(txt) }];
+  }
+  function abrirRoteiro(txt, produto, qual) {
+    const roteiros = separarRoteiros(txt), n = Math.min(Math.max(0, qual || 0), roteiros.length - 1);
+    const { cenas, ganchos, titulo } = roteiros[n];
+    const palavras = cenas.reduce((t, c) => t + (c.fala.replace(/\[[^\]]*\]/g, "").match(/\S+/g) || []).length, 0), seg = Math.round(palavras / 3.25);
     const comCena = cenas.some((c) => c.imagem), nomeProd = String(produto || "").trim().slice(0, 60);
     const antigo = $("#roteiroCenas"); if (antigo) antigo.remove();
     const m = document.createElement("div"); m.id = "roteiroCenas"; m.className = "roteiro-tela"; m.setAttribute("role", "dialog"); m.setAttribute("aria-label", "Roteiro de gravação");
+    const abas = roteiros.length > 1 ? `<div class="roteiro-abas" role="tablist" aria-label="Roteiros desta copy">${roteiros.map((r, k) => `<button type="button" class="chip" role="tab" data-roteiro="${k}" aria-pressed="${k === n}" aria-selected="${k === n}">Roteiro ${k + 1}${r.titulo ? " · " + esc(r.titulo.slice(0, 40)) : ""}</button>`).join("")}</div>` : "";
     m.innerHTML = `<div class="roteiro-caixa">
-      <div class="roteiro-topo"><div><p class="rot">Roteiro de gravação</p><h2>Vídeo TikTok${nomeProd ? " · " + esc(nomeProd) : ""}</h2><p class="sub">${cenas.length} cenas · ~${seg}s de fala (${palavras} palavras)</p></div>
+      <div class="roteiro-topo"><div><p class="rot">Roteiro de gravação${roteiros.length > 1 ? ` · ${n + 1} de ${roteiros.length}` : ""}</p><h2>Vídeo TikTok${nomeProd ? " · " + esc(nomeProd) : ""}${roteiros.length > 1 ? ` · Roteiro ${n + 1}` : ""}</h2>${titulo ? `<p class="sub"><b>${esc(titulo)}</b></p>` : ""}<p class="sub">${cenas.length} cenas · ~${seg}s de fala (${palavras} palavras)</p></div>
         <div class="controles"><button class="btn sec pequeno" type="button" data-acao="imprimir-roteiro">Imprimir</button><button class="btn pequeno" type="button" data-acao="fechar-roteiro">Fechar</button></div></div>
+      ${abas}
       <div class="roteiro-colunas${comCena ? "" : " uma"}"><span>Áudio / fala</span>${comCena ? "<span>Imagem / cena</span>" : ""}</div>
       ${cenas.map((c, i) => `<div class="roteiro-linha${comCena ? "" : " uma"}"><div class="r-fala"><p class="rot">Fala ${i + 1}${c.parte ? " · " + esc(c.parte) : ""}</p><p>${esc(c.fala || "(sem fala)").replace(/\[([^\]]*)\]/g, '<span class="r-lacuna">[$1]</span>')}</p>${c.texto ? `<p class="r-texto">Texto na tela: <b>${esc(c.texto)}</b></p>` : ""}</div>${comCena ? `<div class="r-cena"><p class="rot">Cena ${i + 1}</p><p>${c.imagem ? esc(c.imagem) : "<i>sem cena descrita</i>"}</p></div>` : ""}</div>`).join("") || '<p class="vazio">Não achei cenas nessa copy.</p>'}
       ${ganchos.length ? `<div class="roteiro-ganchos"><p class="rot">Ganchos para testar</p><ol>${ganchos.map((g) => `<li>${esc(g)}</li>`).join("")}</ol></div>` : ""}
@@ -1050,9 +1334,10 @@ REGRAS: entregue tudo agora, sem fazer perguntas antes: o que faltar fica [entre
     document.body.appendChild(m); document.body.classList.add("com-roteiro");
     m.addEventListener("click", (e) => { if (e.target === m) { m.remove(); document.body.classList.remove("com-roteiro"); } });
     m.querySelectorAll("[data-acao]").forEach((b) => b.addEventListener("click", () => { if (b.dataset.acao === "imprimir-roteiro") window.print(); else { m.remove(); document.body.classList.remove("com-roteiro"); } }));
+    m.querySelectorAll("[data-roteiro]").forEach((b) => b.addEventListener("click", () => { abrirRoteiro(txt, produto, +b.dataset.roteiro); const novo = $("#roteiroCenas"); if (novo) { novo.scrollTop = 0; const a = novo.querySelector(`[data-roteiro="${b.dataset.roteiro}"]`); if (a) a.focus(); } }));
   }
   async function telaCriar(el) {
-    S.refForm = S.refForm || { modo: "mesmo", produto: "", outro: "", muda: { gancho: true, jeito: true }, sabe: "" };
+    S.refForm = S.refForm || { modo: "mesmo", produto: "", outro: "", muda: { gancho: true, jeito: true, antecipacao: true }, sabe: "" };
     const refs = S.refs || [], prontas = refs.filter((r) => r.copy).length;
     let lista = S.refFiltro === "prontas" ? refs.filter((r) => r.copy) : refs;
     if (S.refBusca) { const b = S.refBusca.toLowerCase(); lista = lista.filter((r) => (tituloDa(r) + " " + (r.autor || "") + " " + (r.texto || "")).toLowerCase().includes(b)); }
@@ -1145,11 +1430,12 @@ REGRAS: entregue tudo agora, sem fazer perguntas antes: o que faltar fica [entre
     if (t.dataset.tela) { irPara(t.dataset.tela); return; }
     const a = t.dataset.acao, id = Number(t.dataset.id);
     try {
-      if (a === "estilo" || a === "cor") {
-        const campo = a === "estilo" ? "estilo" : "cor", v = t.dataset.v;
-        aplicarAparencia(campo === "estilo" ? v : S.perfil.estilo, campo === "cor" ? v : S.perfil.cor);
-        S.perfil[campo] = v; await API.salvarPerfil({ [campo]: v }); irPara("perfil"); toast(a === "estilo" ? `Estilo ${ESTILOS[v][0]} aplicado.` : `Cor ${CORES[v][0]} aplicada.`);
-      } else if (a === "usar-sugestao") {
+      if (a === "ap-estilo") { S.ap.estilo = t.dataset.v; desenharAparencia(); }
+      else if (a === "ap-paleta") { S.ap.cor = t.dataset.v; S.ap.custom = null; desenharAparencia(); }
+      else if (a === "ap-sem-custom") { S.ap.custom = null; desenharAparencia(); }
+      else if (a === "ap-aplicar") { t.disabled = true; const ok = await salvarAparencia(S.ap.estilo, S.ap.cor, S.ap.custom); montarMenu(); desenharAparencia(); if (ok) toast(`${ESTILOS[S.ap.estilo][0]} com ${PALETAS[S.ap.cor][0]} aplicado.`); }
+      else if (a === "ap-restaurar") { S.ap = { ...APARENCIA_PADRAO }; const ok = await salvarAparencia(S.ap.estilo, S.ap.cor, null); desenharAparencia(); if (ok) toast("Aparência padrão restaurada."); }
+      else if (a === "usar-sugestao") {
         const sg = sugestaoMeta(); if (!sg) return; await API.salvarPerfil({ meta_gmv: sg.valor }); S.perfil.meta_gmv = sg.valor; toast(`Meta de ${real(sg.valor)} salva.`); irPara(S.tela);
       } else if (a === "periodo") { S.mes = t.dataset.v === "tudo" ? "tudo" : (S.ultimo || hojeISO()).slice(0, 7); irPara("resultados");
       } else if (a === "mes") { S.mes = mesDesloca(S.mes, +t.dataset.n); irPara("resultados"); }
@@ -1194,6 +1480,11 @@ REGRAS: entregue tudo agora, sem fazer perguntas antes: o que faltar fica [entre
         } else if (a === "apagar-ref") { await API.apagarReferencia(r.id); S.refs = S.refs.filter((x) => x.id !== r.id); S.refSel = null; toast("Referência apagada."); irPara("criar"); }
       }
       else if (a === "cat") { S.filtroCat = t.dataset.cat; irPara("produtos"); }
+      else if (a === "esgotado") { await marcarEsgotado(t.dataset.id, true); }
+      else if (a === "instalar-app") { if (pedidoInstalar) { pedidoInstalar.prompt(); try { await pedidoInstalar.userChoice; } catch (_) {} pedidoInstalar = null; irPara(S.tela, true); } }
+      else if (a === "fechar-instalar") { marcarDia("painel-sem-instalar"); irPara(S.tela, true); }
+      else if (a === "fechar-lembrete") { marcarDia("painel-sem-lembrete"); irPara(S.tela, true); }
+      else if (a === "desfazer-esgotado") { await marcarEsgotado(t.dataset.id, false); }
       else if (a === "lancar-plano") { t.disabled = true; await lancarPlano(); }
       else if (a === "sug-lancar") { t.disabled = true; await lancarPlano(S.diaVideos); }
       else if (a === "sug-add") { const x = (S._sug || [])[+t.dataset.k]; if (x) { t.disabled = true; await lancarPlano(S.diaVideos, [x]); } }
@@ -1214,8 +1505,9 @@ REGRAS: entregue tudo agora, sem fazer perguntas antes: o que faltar fica [entre
     const t = e.target; if (!t.dataset || !t.dataset.acao) return;
     try {
       if (t.dataset.acao === "mudar-cat") {
-        const pid = t.dataset.id; await API.salvarProduto({ produto_id: pid, categoria: t.value });
-        S.produtos[pid] = { ...(S.produtos[pid] || { produto_id: pid }), categoria: t.value }; reprocessar(); toast("Categoria salva.");
+        const pid = t.dataset.id, [categoria, subcategoria] = t.value.split("|"), mud = { categoria, subcategoria: subcategoria || "" };
+        await API.salvarProduto({ produto_id: pid, ...mud });
+        S.produtos[pid] = { ...(S.produtos[pid] || { produto_id: pid }), ...mud }; reprocessar(); toast("Categoria salva.");
       } else if (t.dataset.acao === "decisao") {
         const id = Number(t.dataset.id); await API.mudarAmostra(id, { decisao: t.value });
         const am = S.amostras.find((x) => x.id === id); if (am) am.decisao = t.value; montarMenu(); toast("Decisão salva.");
@@ -1227,6 +1519,39 @@ REGRAS: entregue tudo agora, sem fazer perguntas antes: o que faltar fica [entre
   function fecharMenu() { $("#menu").classList.remove("aberto"); $("#veu").hidden = true; }
   $("#abrirMenu").addEventListener("click", () => { $("#menu").classList.add("aberto"); $("#veu").hidden = false; });
   $("#veu").addEventListener("click", fecharMenu);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#menu").classList.contains("aberto")) { fecharMenu(); $("#abrirMenu").focus(); } });
+
+  /* ---------- Menu recolhido (computador): guarda a escolha de cada usuário ---------- */
+  const chaveMenu = () => "painel-menu-recolhido:" + ((S.user && S.user.id) || "anon");
+  function aplicarMenuRecolhido(sim) {
+    $("#app").classList.toggle("recolhido", !!sim);
+    const b = $("#alternaMenu"); b.setAttribute("aria-expanded", String(!sim)); b.setAttribute("aria-label", sim ? "Abrir menu" : "Recolher menu");
+    esconderDica();
+  }
+  function lerMenuRecolhido() {
+    try { const v = localStorage.getItem(chaveMenu()); if (v !== null) return v === "1"; } catch (_) {}
+    return !!(S.perfil && S.perfil.menu_recolhido);
+  }
+  $("#alternaMenu").addEventListener("click", () => {
+    const sim = !$("#app").classList.contains("recolhido");
+    aplicarMenuRecolhido(sim);
+    try { localStorage.setItem(chaveMenu(), sim ? "1" : "0"); } catch (_) {}
+    if (S.perfil) { S.perfil.menu_recolhido = sim; API.salvarPerfil({ menu_recolhido: sim }).catch(() => {}); }   // na conta também (se o banco já tiver a coluna)
+  });
+  // Dica com o nome do item quando o menu está recolhido (fica fora do menu para não ser cortada)
+  const dica = document.createElement("div"); dica.className = "dica-menu"; dica.hidden = true; dica.setAttribute("role", "tooltip"); document.body.appendChild(dica);
+  function esconderDica() { dica.hidden = true; }
+  function mostrarDica(el) {
+    if (!$("#app").classList.contains("recolhido") || window.innerWidth <= 900 || !el.dataset.dica) return esconderDica();
+    const r = el.getBoundingClientRect();
+    dica.textContent = el.dataset.dica; dica.style.left = (r.right + 12) + "px"; dica.style.top = (r.top + r.height / 2) + "px"; dica.hidden = false;
+  }
+  $("#menu").addEventListener("mouseover", (e) => { const el = e.target.closest("[data-dica]"); if (el) mostrarDica(el); else esconderDica(); });
+  $("#menu").addEventListener("mouseleave", esconderDica);
+  $("#menu").addEventListener("focusin", (e) => { const el = e.target.closest("[data-dica]"); if (el) mostrarDica(el); });
+  $("#menu").addEventListener("focusout", esconderDica);
+  $("#menu").addEventListener("scroll", esconderDica);
+  $("#menu").addEventListener("click", esconderDica);
 
   /* =============================================================
      ENTRADA: entrar, criar conta, esqueci a senha
