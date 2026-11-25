@@ -184,5 +184,13 @@ insert into public.perfis (user_id, email)
 select id, email from auth.users
 on conflict (user_id) do nothing;
 
+-- Mais de um perfil do TikTok no mesmo painel. '' = perfil principal; os outros ficam listados em perfis.contas.
+alter table public.perfis add column if not exists contas jsonb not null default '[]'::jsonb;
+alter table public.pedidos add column if not exists conta text not null default '' check (char_length(conta) <= 40);
+alter table public.videos add column if not exists conta text not null default '' check (char_length(conta) <= 40);
+alter table public.amostras add column if not exists conta text not null default '' check (char_length(conta) <= 40);
+alter table public.importacoes add column if not exists conta text not null default '' check (char_length(conta) <= 40);
+create index if not exists pedidos_user_conta on public.pedidos (user_id, conta);
+
 -- Avisa o Supabase que as colunas mudaram (sem isso o painel pode dizer "column ... schema cache")
 notify pgrst, 'reload schema';

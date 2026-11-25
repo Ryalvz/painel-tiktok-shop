@@ -725,5 +725,15 @@ td select.sel-cat { min-width: 190px; max-width: 240px; }
 .tema-amostra.ta-hoje, .tema-amostra.ta-resultados { padding: 10px; }
 @media (max-width: 720px) { .ap-previa .ta-lado { display: none; } }
 
+/* Perfis do TikTok: seletor no menu e cadastro em Meu perfil */
+.seletor-conta { padding: 0 4px 8px; }
+.seletor-conta .lbl { color: var(--menu-txt2); margin-bottom: 4px; }
+.seletor-conta select.inp { background: var(--menu-hover); color: var(--menu-txt); border-color: var(--menu-borda); padding: 7px 10px; font-size: 13px; }
+.seletor-conta select.inp option { color: #111318; background: #fff; }
+@media (min-width: 901px) { .app.recolhido .seletor-conta { display: none; } }
+.contas .conta-linha { display: block; }
+.contas .conta-linha .link { margin-top: 6px; }
+.escolhe-conta select.inp { max-width: 320px; }
+
 /* Site do aluno: sem "Criar conta" */
 .abas-entrada, #formCriar { display: none !important; }
